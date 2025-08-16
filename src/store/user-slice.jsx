@@ -1,0 +1,66 @@
+import { createSlice, configureStore } from "@reduxjs/toolkit";
+
+const STORAGE = { nickname: "nickname", email: "email", role: "role" };
+
+const safeGet = (key) =>
+  (typeof localStorage !== "undefined"
+    ? localStorage.getItem(key) || ""
+    : ""
+  ).trim();
+
+const load = () => ({
+  nickname: safeGet(STORAGE.nickname),
+  email: safeGet(STORAGE.email),
+  role: safeGet(STORAGE.role),
+});
+
+const userSlice = createSlice({
+  name: "user",
+  initialState: load(),
+  reducers: {
+    setUser(state, { payload }) {
+      const { nickname, email, role } = payload || {};
+      if (nickname !== undefined) state.nickname = nickname;
+      if (email !== undefined) state.email = email;
+      if (role !== undefined) state.role = String(role);
+    },
+    clearUser(state) {
+      state.nickname = "";
+      state.email = "";
+      state.role = "";
+    },
+    syncFromStorage(state) {
+      const s = load();
+      state.nickname = s.nickname;
+      state.email = s.email;
+      state.role = s.role;
+    },
+  },
+});
+
+export const { setUser, clearUser, syncFromStorage } = userSlice.actions;
+
+export const store = configureStore({
+  reducer: { user: userSlice.reducer },
+});
+
+// 저장소 → localStorage 동기화
+if (typeof window !== "undefined") {
+  store.subscribe(() => {
+    const { nickname, email, role } = store.getState().user;
+    if (nickname) localStorage.setItem(STORAGE.nickname, nickname);
+    else localStorage.removeItem(STORAGE.nickname);
+
+    if (email) localStorage.setItem(STORAGE.email, email);
+    else localStorage.removeItem(STORAGE.email);
+
+    if (role) localStorage.setItem(STORAGE.role, role);
+    else localStorage.removeItem(STORAGE.role);
+  });
+}
+
+export const selectSession = (state) => {
+  const { nickname, email, role } = state.user;
+  if (!nickname && !email && !role) return null;
+  return { user: { name: nickname || "(No name)", email, role } };
+};
