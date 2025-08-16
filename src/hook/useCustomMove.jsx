@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 const useCustomMove = () => {
   const navigate = useNavigate();
 
-  const moveToSignIn = () => {
+  const moveToSignin = () => {
     navigate("/signin");
   };
 
-  const moveToSignUp = () => {
+  const moveToSignup = () => {
     navigate("/signup");
   };
 
@@ -16,8 +16,8 @@ const useCustomMove = () => {
   };
 
   return {
-    moveToSignIn,
-    moveToSignUp,
+    moveToSignin,
+    moveToSignup,
     moveToNewsList,
   };
 };

@@ -21,7 +21,7 @@ export default function SignUpPage({ onBack }) {
     birthdate: "",
   });
   const [errors, setErrors] = useState({});
-  const { moveToSignIn } = useCustomMove();
+  const { moveToSignin } = useCustomMove();
   const theme = useTheme();
   const validate = (name, value) => {
     let error = "";
@@ -94,7 +94,7 @@ export default function SignUpPage({ onBack }) {
       });
 
       alert("회원가입 성공!");
-      moveToSignIn();
+      moveToSignin();
     } catch (err) {
       console.error(err);
       alert("회원가입에 실패했습니다.");
@@ -210,7 +210,7 @@ export default function SignUpPage({ onBack }) {
           >
             회원가입
           </Button>
-          <Button fullWidth variant="outlined" onClick={moveToSignIn}>
+          <Button fullWidth variant="outlined" onClick={moveToSignin}>
             뒤로가기
           </Button>
         </Box>

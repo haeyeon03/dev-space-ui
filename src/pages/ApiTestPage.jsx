@@ -1,14 +1,13 @@
 // 추후 삭제 예정(참고용)
-import React, { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { api } from "../api/api-client";
-import { authStore } from "../store/auth-store";
 import { setUser } from "../store/user-slice";
 
 const ApiTestPage = () => {
-  const [result, setResult] = useState(null);
-  const [token, setToken] = useState(null);
   const dispatch = useDispatch();
+  const token = useSelector((state) => state.user.token);
+  const [result, setResult] = useState(null);
 
   const handleGet = async () => {
     try {
@@ -82,15 +81,12 @@ const ApiTestPage = () => {
       setResult(data);
 
       if (data.data) {
-        // 임시 데이터
-        const nickname = "Miss Fortune Master";
-        const email = "haeyeon01@google.com";
-        const role = "ADMIN";
+        const token = data.data.accessToken;
+        const nickname = data.data.nickname;
+        const email = data.data.email;
+        const role = data.data.role;
 
-        dispatch(setUser({ nickname, email, role }));
-        authStore.setAccessToken(data.data.accessToken);
-
-        setToken(authStore.getAccessToken()); // 필요 X
+        dispatch(setUser({ token, nickname, email, role }));
       }
     } catch (err) {
       console.error(err);
@@ -124,9 +120,7 @@ const ApiTestPage = () => {
 
       <pre>{JSON.stringify(result, null, 2)}</pre>
 
-      <pre>
-        Access Token In Web Browser Memory: {JSON.stringify(token, null, 2)}
-      </pre>
+      <pre>Access Token: {JSON.stringify(token, null, 2)}</pre>
     </div>
   );
 };

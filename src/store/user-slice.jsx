@@ -1,6 +1,11 @@
 import { createSlice, configureStore } from "@reduxjs/toolkit";
 
-const STORAGE = { nickname: "nickname", email: "email", role: "role" };
+const STORAGE = {
+  token: "token",
+  nickname: "nickname",
+  email: "email",
+  role: "role",
+};
 
 const safeGet = (key) =>
   (typeof localStorage !== "undefined"
@@ -9,6 +14,7 @@ const safeGet = (key) =>
   ).trim();
 
 const load = () => ({
+  token: safeGet(STORAGE.token),
   nickname: safeGet(STORAGE.nickname),
   email: safeGet(STORAGE.email),
   role: safeGet(STORAGE.role),
@@ -19,18 +25,21 @@ const userSlice = createSlice({
   initialState: load(),
   reducers: {
     setUser(state, { payload }) {
-      const { nickname, email, role } = payload || {};
+      const { token, nickname, email, role } = payload || {};
+      if (token !== undefined) state.token = token;
       if (nickname !== undefined) state.nickname = nickname;
       if (email !== undefined) state.email = email;
       if (role !== undefined) state.role = String(role);
     },
     clearUser(state) {
+      state.token = "";
       state.nickname = "";
       state.email = "";
       state.role = "";
     },
     syncFromStorage(state) {
       const s = load();
+      state.token = s.token;
       state.nickname = s.nickname;
       state.email = s.email;
       state.role = s.role;
@@ -47,7 +56,10 @@ export const store = configureStore({
 // 저장소 → localStorage 동기화
 if (typeof window !== "undefined") {
   store.subscribe(() => {
-    const { nickname, email, role } = store.getState().user;
+    const { token, nickname, email, role } = store.getState().user;
+    if (token) localStorage.setItem(STORAGE.token, token);
+    else localStorage.removeItem(STORAGE.token);
+
     if (nickname) localStorage.setItem(STORAGE.nickname, nickname);
     else localStorage.removeItem(STORAGE.nickname);
 
@@ -62,5 +74,11 @@ if (typeof window !== "undefined") {
 export const selectSession = (state) => {
   const { nickname, email, role } = state.user;
   if (!nickname && !email && !role) return null;
-  return { user: { name: nickname || "(No name)", email, role } };
+  return {
+    user: {
+      name: nickname || "(No Name)",
+      email: email || "(No Linked E-Mail)",
+      role,
+    },
+  };
 };

@@ -4,7 +4,6 @@ import { useTheme } from "@mui/material/styles";
 import { useDispatch } from "react-redux";
 import { api } from "../../api/api-client";
 import { ko } from "../../locales";
-import { authStore } from "../../store/auth-store";
 import { setUser } from "../../store/user-slice";
 import { useState } from "react";
 import { Box, Button, Divider } from "@mui/material";
@@ -18,7 +17,7 @@ const providers = [
 const CustomSignInPage = () => {
   const dispatch = useDispatch();
   const theme = useTheme();
-  const { moveToSignUp } = useCustomMove();
+  const { moveToSignup, moveToNewsList } = useCustomMove();
 
   const [errors, setErrors] = useState({});
 
@@ -52,12 +51,9 @@ const CustomSignInPage = () => {
       });
 
       if (data.status === 200) {
-        const { nickname, email, role, accessToken } = data.data;
-
-        dispatch(setUser({ nickname, email, role }));
-        authStore.setAccessToken(accessToken);
-
-        // TODO: 메인 페이지 이동
+        const { accessToken, nickname, email, role } = data.data;
+        dispatch(setUser({ token: accessToken, nickname, email, role }));
+        moveToNewsList();
       } else {
         alert(data.message || "로그인에 실패했습니다.");
       }
@@ -82,7 +78,6 @@ const CustomSignInPage = () => {
         }}
       >
         <Box sx={{ width: "100%", maxWidth: 400 }}>
-          {/* SignInPage 그대로 */}
           <SignInPage
             signIn={(provider, formData) => handleSignIn(provider, formData)}
             slotProps={{
@@ -114,7 +109,7 @@ const CustomSignInPage = () => {
           <Box sx={{ textAlign: "center", mt: 16 }}>
             <Button
               variant="outlined"
-              onClick={() => moveToSignUp()}
+              onClick={() => moveToSignup()}
               sx={{
                 width: "80%",
               }}

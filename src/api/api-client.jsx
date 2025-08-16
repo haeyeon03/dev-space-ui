@@ -1,6 +1,6 @@
 // api-client.js
 import axios from "axios";
-import { authStore } from "../store/auth-store";
+import { store, clearUser } from "../store/user-slice";
 
 /**
  * 인증이 필요 없는 API URL
@@ -27,7 +27,7 @@ export class APIClient {
     // ===== 요청 인터셉터 =====
     this.instance.interceptors.request.use((config) => {
       const url = config.url || "";
-      const token = authStore.getAccessToken();
+      const token = store.getState().user.token;
 
       // 인증 불필요 경로는 스킵
       if (isAuthFree(url)) return config;
@@ -43,7 +43,7 @@ export class APIClient {
     // ===== 응답 인터셉터 =====
     this.instance.interceptors.response.use(
       (res) => {
-        console.log(res);
+        console.log("response:", res);
         return res;
       }, //정상이면 그냥 res 온거 그대로 return
       async (error) => {
@@ -70,7 +70,7 @@ export class APIClient {
             }
             return this.instance(original); // 원 요청 재시도
           } catch {
-            authStore.clear();
+            dispatch(clearUser());
             return Promise.reject(error);
           }
         }
@@ -102,7 +102,7 @@ export class APIClient {
       const newToken = res.data?.accessToken;
       if (!newToken) throw new Error("No accessToken in reissue response");
 
-      authStore.setAccessToken(newToken);
+      store.dispatch(setUser({ token: newToken }));
 
       const waiters = this.queue.slice();
       this.queue.length = 0;

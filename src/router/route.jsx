@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import App from "../App"; // Toolpad AppProvider + Outlet
 import Layout from "../layouts/dashboard"; // 공통 레이아웃
 import LoadingPage from "../pages/common/LoadingPage";
+import ProtectedRoute from "../components/common/ProtectedRoute";
 
 // Lazy 로딩 + Suspense 헬퍼
 const lazyPage = (importFn) => {
@@ -100,8 +101,22 @@ const root = createBrowserRouter([
             ],
           },
           // 인증 페이지
-          { path: "signin", element: <SignInPage /> },
-          { path: "signup", element: <SignUpPage /> },
+          {
+            path: "signin",
+            element: (
+              <ProtectedRoute>
+                <SignInPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "signup",
+            element: (
+              <ProtectedRoute>
+                <SignUpPage />
+              </ProtectedRoute>
+            ),
+          },
         ],
       },
     ],
