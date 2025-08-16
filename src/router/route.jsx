@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import App from "../App"; // Toolpad AppProvider + Outlet
 import Layout from "../layouts/dashboard"; // 공통 레이아웃
 import LoadingPage from "../pages/common/LoadingPage";
+import ProtectedRoute from "../components/common/ProtectedRoute";
 
 // Lazy 로딩 + Suspense 헬퍼
 const lazyPage = (importFn) => {
@@ -42,6 +43,9 @@ const AdminUserListPage = () =>
 const AdminUserWritePage = () =>
   lazyPage(() => import("../pages/admin/AdminUserWritePage"));
 
+// API 테스트 페이지 추후 삭제 예정
+const ApiTestPage = () => lazyPage(() => import("../pages/ApiTestPage"));
+
 const root = createBrowserRouter([
   {
     element: <App />, // Toolpad Provider
@@ -50,7 +54,10 @@ const root = createBrowserRouter([
         path: "/",
         element: <Layout />, // Toolpad Layout
         children: [
-          // 대시보드 & 뉴스
+          // API 테스트 페이지 추후 삭제 예정
+          { path: "test", element: <ApiTestPage /> },
+
+          // 뉴스(메인)
           { index: true, element: <NewsListPage /> },
           { path: "news/:id", element: <NewsViewPage /> },
 
@@ -93,12 +100,25 @@ const root = createBrowserRouter([
               { path: "user/write", element: <AdminUserWritePage /> },
             ],
           },
+          // 인증 페이지
+          {
+            path: "signin",
+            element: (
+              <ProtectedRoute>
+                <SignInPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "signup",
+            element: (
+              <ProtectedRoute>
+                <SignUpPage />
+              </ProtectedRoute>
+            ),
+          },
         ],
       },
-
-      // 인증 페이지 (Layout 없이)
-      { path: "signin", element: <SignInPage /> },
-      { path: "signup", element: <SignUpPage /> },
     ],
   },
 ]);

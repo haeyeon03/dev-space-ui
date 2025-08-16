@@ -4,6 +4,13 @@ import SupportIcon from "@mui/icons-material/HelpOutline";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 
 export const NAVIGATOR = [
+  // 추후 삭제 예정
+  {
+    title: "API Test Page",
+    segment: "test",
+    icon: <ArticleIcon />,
+  },
+  { kind: "divider" },
   { segment: "", title: "News Feed", icon: <DashboardIcon />, pattern: "/" },
   { kind: "divider" },
   {
