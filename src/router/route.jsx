@@ -24,6 +24,8 @@ const BoardViewPage = () =>
   lazyPage(() => import("../pages/board/BoardViewPage"));
 const BoardWritePage = () =>
   lazyPage(() => import("../pages/board/BoardWritePage"));
+const BoardEditPage = () =>
+  lazyPage(() => import("../pages/board/BoardEditPage"));
 const FaqPage = () => lazyPage(() => import("../pages/support/FaqPage"));
 const InquiryPage = () =>
   lazyPage(() => import("../pages/support/InquiryPage"));
@@ -68,6 +70,7 @@ const root = createBrowserRouter([
               { index: true, element: <BoardListPage /> },
               { path: ":id", element: <BoardViewPage /> },
               { path: "write", element: <BoardWritePage /> },
+              { path: "edit/:id", element: <BoardEditPage /> },
             ],
           },
 
