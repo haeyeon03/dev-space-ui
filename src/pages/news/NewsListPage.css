@@ -1,0 +1,164 @@
+.news-list-page {
+  min-height: 100vh;
+  background-color: black;
+  color: white;
+  padding: 1.5rem;
+}
+
+.news-list-page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  height: 15rem;
+  padding: 60px;
+}
+
+.news-list-page-header h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+}
+
+.news-list-page-header .highlight {
+  color: #a855f7;
+}
+
+.news-list-page-header p {
+  color: #9ca3af;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+  justify-content: center;
+}
+
+.search-bar select,
+.search-bar input {
+  background-color: #1f2937;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  border: none;
+  color: white;
+}
+
+.search-bar input {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  width: 50%;
+}
+
+.news-card-list {
+}
+
+.news-card {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid #374151;
+  padding-bottom: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.news-card:first-child {
+  margin-top: 0;
+}
+
+.news-card-image-box {
+  background-color: #111827;
+  width: 10rem;
+  height: 10rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  position: relative;
+  min-height: 200px;
+}
+
+.news-card-image-box > button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.prev-btn {
+  left: 10px;
+}
+
+.next-btn {
+  right: 10px;
+}
+
+.carousel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.news-card-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.news-card-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.news-card-content p {
+  color: #9ca3af;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  position: relative;
+}
+
+.news-card-more {
+  cursor: pointer;
+  color: rgb(255, 255, 255);
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.news-card-content p.expanded {
+  max-height: 1000px;
+  display: block !important;
+  overflow: visible !important;
+  -webkit-line-clamp: unset !important;
+}
+
+/* 기존 fixed 제거 후, 마지막 카드 아래에 자연스럽게 나타나도록 */
+.spinner-container {
+  display: flex;
+  justify-content: center; /* 가운데 정렬 */
+  margin: 1rem 0; /* 위아래 여백 */
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #555;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
