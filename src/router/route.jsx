@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import App from "../App"; // Toolpad AppProvider + Outlet
 import Layout from "../layouts/dashboard"; // 공통 레이아웃
@@ -29,7 +29,6 @@ const BoardEditPage = () =>
 const FaqPage = () => lazyPage(() => import("../pages/support/FaqPage"));
 const InquiryPage = () =>
   lazyPage(() => import("../pages/support/InquiryPage"));
-const NoticePage = () => lazyPage(() => import("../pages/support/NoticePage"));
 const MyInfoViewPage = () =>
   lazyPage(() => import("../pages/mypage/MyInfoViewPage"));
 const MyInfoWritePage = () =>
@@ -80,7 +79,6 @@ const root = createBrowserRouter([
             children: [
               { path: "faq", element: <FaqPage /> },
               { path: "inquiry", element: <InquiryPage /> },
-              { path: "notice", element: <NoticePage /> },
             ],
           },
 

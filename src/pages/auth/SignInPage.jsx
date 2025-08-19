@@ -6,7 +6,7 @@ import { api } from "../../api/api-client";
 import { ko } from "../../locales";
 import { setUser } from "../../store/user-slice";
 import { useState } from "react";
-import { Box, Button, Divider } from "@mui/material";
+import { Box, Link } from "@mui/material";
 import useCustomMove from "../../hook/useCustomMove";
 
 const providers = [
@@ -14,6 +14,20 @@ const providers = [
   { id: "credentials", name: "아이디" },
 ];
 
+function SignUpLink({ moveToSignup }) {
+  return (
+    <Box sx={{ textAlign: "right", mt: 1 }}>
+      <Link
+        component="button"
+        type="button"
+        variant="body2"
+        onClick={moveToSignup}
+      >
+        회원가입
+      </Link>
+    </Box>
+  );
+}
 const CustomSignInPage = () => {
   const dispatch = useDispatch();
   const theme = useTheme();
@@ -80,6 +94,9 @@ const CustomSignInPage = () => {
         <Box sx={{ width: "100%", maxWidth: 400 }}>
           <SignInPage
             signIn={(provider, formData) => handleSignIn(provider, formData)}
+            slots={{
+              signUpLink: () => <SignUpLink moveToSignup={moveToSignup} />,
+            }}
             slotProps={{
               form: { noValidate: true },
               emailField: {
@@ -105,18 +122,6 @@ const CustomSignInPage = () => {
             }}
             providers={providers}
           />
-          <Divider sx={{ my: -14 }} />
-          <Box sx={{ textAlign: "center", mt: 16 }}>
-            <Button
-              variant="outlined"
-              onClick={() => moveToSignup()}
-              sx={{
-                width: "80%",
-              }}
-            >
-              회원가입
-            </Button>
-          </Box>
         </Box>
       </Box>
     </AppProvider>

@@ -2,7 +2,7 @@
   min-height: 100vh;
   background-color: black;
   color: white;
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .news-list-page-header {
@@ -31,25 +31,27 @@
   gap: 1rem;
   margin-bottom: 2.5rem;
   justify-content: center;
+  width: 100%;
 }
 
 .search-bar select,
 .search-bar input {
   background-color: #1f2937;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.25rem;
+  border-radius: 0.5rem;
   border: none;
   color: white;
+  height: 3.5rem;
+  font-size: 1.2rem;
 }
 
 .search-bar input {
   padding-left: 1rem;
   padding-right: 1rem;
-  width: 50%;
+  width: 70%;
 }
 
-.news-card-list {
-}
+.news-card-list {}
 
 .news-card {
   display: flex;
@@ -76,7 +78,7 @@
   min-height: 200px;
 }
 
-.news-card-image-box > button {
+.news-card-image-box>button {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -141,8 +143,10 @@
 /* 기존 fixed 제거 후, 마지막 카드 아래에 자연스럽게 나타나도록 */
 .spinner-container {
   display: flex;
-  justify-content: center; /* 가운데 정렬 */
-  margin: 1rem 0; /* 위아래 여백 */
+  justify-content: center;
+  /* 가운데 정렬 */
+  margin: 1rem 0;
+  /* 위아래 여백 */
 }
 
 .spinner {
@@ -158,6 +162,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

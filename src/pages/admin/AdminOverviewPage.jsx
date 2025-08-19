@@ -36,6 +36,15 @@ ChartJS.register(
   Filler
 );
 
+import {
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Grid,
+} from "@mui/material";
+
 const fmt = (d) => d.toISOString().slice(0, 10);
 
 /*
@@ -61,6 +70,8 @@ const AdminOverviewPage = () => {
   const [gender, setGender] = useState(null); // {male, female}
   const [daily, setDaily] = useState([]); // [{date, viewCount}]
   const [ageGender, setAgeGender] = useState([]); // [{ageGroup, gender, viewCount}]
+  // daily view, age gender 묶음
+  const [chartTab, setChartTab] = React.useState("daily");
 
   const [err, setErr] = useState(null);
 
@@ -90,7 +101,7 @@ const AdminOverviewPage = () => {
       ]);
       setDaily(Array.isArray(dv) ? dv : []);
       setAgeGender(Array.isArray(ag) ? ag : []);
-      console.log(ag);
+      console.log("get", dv);
     } catch (e2) {
       setErr(e2?.message || String(e2));
     } finally {
@@ -134,6 +145,7 @@ const AdminOverviewPage = () => {
 
   // 일별 조회수 (Line)
   const dailyData = useMemo(() => {
+    const safe = Array.isArray(daily) ? daily : [];
     const labels = daily.map((d) => d.date);
     const values = daily.map((d) => d.viewCount);
     return {
@@ -154,28 +166,31 @@ const AdminOverviewPage = () => {
 
   // 연령·성별 (Bar, stack)
   const ageGenderData = useMemo(() => {
-    const rows = ageGender || [];
+    const rows = Array.isArray(ageGender) ? ageGender : [];
     const order = ["10대", "20대", "30대", "40대", "50대", "60대 이상"];
     const grouped = new Map();
     for (const r of rows) {
       const key = r.ageGroup || "기타";
       const g = (r.gender || "").toUpperCase();
-      if (!grouped.has(key)) grouped.set(key, { M: 0, F: 0 });
+      if (!grouped.has(key)) grouped.set(key, { M: 0, F: 0, X: 0 });
       const acc = grouped.get(key);
       if (g === "M") acc.M += r.viewCount || 0;
       else if (g === "F") acc.F += r.viewCount || 0;
+      else acc.X += r.viewCount || 0;
     }
     const labels = Array.from(grouped.keys()).sort(
       (a, b) => order.indexOf(a) - order.indexOf(b)
     );
     const M = labels.map((k) => grouped.get(k).M);
     const F = labels.map((k) => grouped.get(k).F);
+    const X = labels.map((k) => grouped.get(k).X);
 
     return {
       labels,
       datasets: [
         { label: "남성", data: M, backgroundColor: "#0d6efd", stack: "g" },
         { label: "여성", data: F, backgroundColor: "#dc3545", stack: "g" },
+        { label: "기타", data: X, backgroundColor: "#6c757d", stack: "g" },
       ],
     };
   }, [ageGender]);
@@ -202,8 +217,49 @@ const AdminOverviewPage = () => {
       {/* 상단 필터 */}
       <Row className="align-items-end g-3 mb-3">
         <Col xs="auto">
-          <h4 className="mb-0">관리자 대시보드</h4>
+          <h3 className="mb-0">관리자 대시보드</h3>
         </Col>
+      </Row>
+
+      {/* KPI */}
+      <Grid container spacing={25} alignItems="stretch" sx={{ mb: 5 }}>
+        <Grid item xs={12} md={7}>
+          {kpi.map((k) => (
+            <Col key={k.title} md={6}>
+              <Card className="shadow-sm h-100">
+                <Card.Body>
+                  <div className="text-muted small">{k.title}</div>
+                  <div className="fw-semibold fs-4 mt-1">{k.value}</div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Grid>
+
+        {/* 성별 비율 */}
+
+        <Grid item xs={12} md={10}>
+          <Card className="shadow-sm h-100">
+            <Card.Body>
+              <Card.Title>성별 비율</Card.Title>
+              <div style={{ height: 280 }}>
+                <Doughnut data={genderData} />
+              </div>
+            </Card.Body>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Col lg={8}>
+        <Card className="shadow-sm h-100">
+          <Card.Body>
+            <Card.Title>날짜 설정</Card.Title>
+          </Card.Body>
+        </Card>
+      </Col>
+
+      {/* 하단: 차트 전환 (라디오 버튼 + 단일 카드) */}
+      <Row className="g-3">
         <Col xs="auto" className="ms-auto">
           <Form className="d-flex align-items-center gap-2">
             <Form.Group controlId="startDate">
@@ -226,74 +282,53 @@ const AdminOverviewPage = () => {
             </Form.Group>
           </Form>
         </Col>
-      </Row>
+        {/* 오른쪽 정렬된 라디오 버튼 */}
+        <Col xs={12} className="d-flex justify-content-end">
+          <FormControl>
+            <FormLabel id="chart-tab-label" className="small">
+              차트 선택
+            </FormLabel>
+            <RadioGroup
+              row
+              aria-labelledby="chart-tab-label"
+              name="chart-tab"
+              value={chartTab}
+              onChange={(e) => setChartTab(e.target.value)}
+            >
+              <FormControlLabel
+                value="daily"
+                control={<Radio size="small" />}
+                label="일별 조회수"
+              />
+              <FormControlLabel
+                value="ageGender"
+                control={<Radio size="small" />}
+                label="연령·성별별 분포"
+              />
+            </RadioGroup>
+          </FormControl>
+        </Col>
 
-      {err && (
-        <Alert variant="danger" className="mb-3">
-          {err}
-        </Alert>
-      )}
-
-      {/* KPI */}
-      <Row className="g-3 mb-3">
-        {kpi.map((k) => (
-          <Col key={k.title} xs={6} md={3}>
+        <Col xs={12}>
+          {chartTab === "daily" ? (
             <Card className="shadow-sm h-100">
               <Card.Body>
-                <div className="text-muted small">{k.title}</div>
-                <div className="fw-semibold fs-4 mt-1">{k.value}</div>
+                <Card.Title>일별 조회수</Card.Title>
+                <div style={{ height: 340 }}>
+                  <Line data={dailyData} options={lineOptions} />
+                </div>
               </Card.Body>
             </Card>
-          </Col>
-        ))}
-      </Row>
-
-      {/* 상단: 성별 도넛 + 메모 */}
-      <Row className="g-3 mb-3">
-        <Col lg={4}>
-          <Card className="shadow-sm h-100">
-            <Card.Body>
-              <Card.Title>성별 비율</Card.Title>
-              <div style={{ height: 280 }}>
-                <Doughnut data={genderData} />
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={8}>
-          <Card className="shadow-sm h-100">
-            <Card.Body>
-              <Card.Title>공지/메모</Card.Title>
-              <div className="text-muted small">
-                기간을 변경하면 <strong>일별 조회수</strong>와{" "}
-                <strong>연령·성별 분포</strong>가 즉시 갱신됩니다.
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 하단: 일별 조회수 / 연령·성별 분포 */}
-      <Row className="g-3">
-        <Col lg={6}>
-          <Card className="shadow-sm h-100">
-            <Card.Body>
-              <Card.Title>일별 조회수</Card.Title>
-              <div style={{ height: 340 }}>
-                <Line data={dailyData} options={lineOptions} />
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={6}>
-          <Card className="shadow-sm h-100">
-            <Card.Body>
-              <Card.Title>연령·성별 분포</Card.Title>
-              <div style={{ height: 340 }}>
-                <Bar data={ageGenderData} options={barOptions} />
-              </div>
-            </Card.Body>
-          </Card>
+          ) : (
+            <Card className="shadow-sm h-100">
+              <Card.Body>
+                <Card.Title>연령·성별별 분포</Card.Title>
+                <div style={{ height: 340 }}>
+                  <Bar data={ageGenderData} options={barOptions} />
+                </div>
+              </Card.Body>
+            </Card>
+          )}
         </Col>
       </Row>
     </Container>
