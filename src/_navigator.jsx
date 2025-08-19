@@ -26,7 +26,6 @@ export const NAVIGATOR = [
     children: [
       { title: "FAQ", segment: "faq", pattern: "support/faq" },
       { title: "Inquiry", segment: "inquiry", pattern: "support/inquiry" },
-      { title: "Notice", segment: "notice", pattern: "support/notice" },
     ],
   },
   { kind: "divider" },
