@@ -13,7 +13,7 @@ export default function Layout() {
         sidebarFooter: SidebarFooterAccount, // 사이드바 하단
       }}
     >
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ px: 20, py: 7 }}>
         <Outlet />
       </Box>
     </DashboardLayout>

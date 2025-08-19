@@ -1,5 +1,290 @@
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Row,
+  Col,
+  Form,
+  InputGroup,
+  Button,
+  Badge,
+  Alert,
+  Spinner,
+} from "react-bootstrap";
+import { DataGrid } from "@mui/x-data-grid";
+import { useNavigate } from "react-router-dom";
+import { api } from "../../api/api-client"; // 경로는 프로젝트 구조에 맞춰 조정
+
+// 서버 페이징 기본값
+const DEFAULT_PAGE = 0; // Spring Page index (0-based)
+const DEFAULT_SIZE = 10;
+
 const AdminUserListPage = () => {
-  return <div>AdminUserListPage</div>;
+  const navigate = useNavigate();
+
+  // 검색/필터 상태
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState(""); // '', 'admin', 'user'
+  const [suspendedFilter, setSuspendedFilter] = useState(""); // '', 'true', 'false'
+
+  // 페이징/정렬 상태
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [pageSize, setPageSize] = useState(DEFAULT_SIZE);
+  const [sortModel, setSortModel] = useState([]); // [{ field: 'nickname', sort: 'asc' }]
+
+  // 데이터 상태
+  const [rows, setRows] = useState([]);
+  const [rowCount, setRowCount] = useState(0);
+
+  // 디바운스 검색 키
+  const [typingKey, setTypingKey] = useState(0);
+
+  // 서버호출: 목록 조회
+  const loadUsers = async () => {
+    // 정렬 파라미터 만들기 (백엔드: sort=field,dir 형식 가정)
+    const sortParam = sortModel?.[0]
+      ? `${sortModel[0].field},${sortModel[0].sort}`
+      : undefined;
+
+    const params = {
+      page,
+      size: pageSize,
+      q: query || undefined, // 닉네임/이름 통합 검색
+      role: roleFilter || undefined, // 'admin' | 'user'
+      suspended: suspendedFilter || undefined, // 'true' | 'false'
+      sort: sortParam,
+    };
+
+    // 백엔드 엔드포인트 가정: GET /admins/users (Spring Data Page 반환)
+    const data = await api.get("/admins/users", params);
+    /*
+        응답 예시 (Spring Page):
+        {
+          content: [
+            {
+              userId: "test001",
+              name: "홍길동",
+              nickname: "길동쓰",
+              gender: "M",        // or "F", null
+              role: "admin" | "user",
+              banned: true | false,
+              banEndAt: "2025-08-31T12:00:00" | null
+            },
+            ...
+          ],
+          totalElements: 123,
+          totalPages: 13,
+          number: 0,            // 현재 페이지
+          size: 10
+        }
+      */
+
+    const content = Array.isArray(data?.content) ? data.content : [];
+    setRows(
+      content.map((u, idx) => ({
+        id: u.userId ?? idx, // DataGrid row key
+        userId: u.userId ?? "",
+        nickname: u.nickname ?? "",
+        gender: u.gender ?? "",
+        role: u.role ?? "",
+        banned: !!u.banned,
+        banEndAt: u.banEndAt ?? null,
+      }))
+    );
+    setRowCount(Number.isFinite(data?.totalElements) ? data.totalElements : 0);
+    console.log("rows:", rows);
+  };
+
+  // 최초 및 의존성 변경 시 로드
+  useEffect(() => {
+    loadUsers(); /* eslint-disable-next-line */
+  }, [page, pageSize, sortModel, typingKey, roleFilter, suspendedFilter]);
+
+  // 검색 입력 디바운스
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(0); // 검색어 바뀌면 1페이지부터
+      setTypingKey((k) => k + 1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // 컬럼 정의
+  const columns = useMemo(
+    () => [
+      {
+        field: "userId",
+        headerName: "아이디",
+        flex: 1,
+        minWidth: 130,
+        sortable: true,
+      },
+      {
+        field: "nickname",
+        headerName: "닉네임",
+        flex: 1,
+        minWidth: 140,
+        sortable: true,
+      },
+      {
+        field: "gender",
+        headerName: "성별",
+        width: 90,
+        sortable: false,
+        valueGetter: (params) => {
+          const g = (params?.row?.gender || "").toUpperCase();
+          const label = g === "M" ? "남성" : "여성";
+          return label;
+          // if (g === "M") return "남성";
+          // if (g === "F") return "여성";
+          // return "기타";
+        },
+      },
+      {
+        field: "role",
+        headerName: "역할",
+        width: 120,
+        sortable: true,
+        renderCell: (params) => {
+          const r = (params.row.role || "").toLowerCase();
+          const variant = r === "admin" ? "primary" : "secondary";
+          const label = r === "admin" ? "관리자" : "유저";
+          return <Badge bg={variant}>{label}</Badge>;
+        },
+      },
+      {
+        field: "banned",
+        headerName: "정지 상태",
+        width: 140,
+        sortable: true,
+        renderCell: (params) => {
+          const banned = !!params.row.banned;
+          const until = params.row.banEndAt;
+          return banned ? (
+            <div>
+              <Badge bg="danger">정지</Badge>
+              {until ? (
+                <div className="small text-muted">
+                  {new Date(until).toLocaleString()}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <Badge bg="success">정상</Badge>
+          );
+        },
+      },
+      {
+        field: "actions",
+        headerName: "작업",
+        width: 120,
+        sortable: false,
+        renderCell: (params) => (
+          <Button
+            size="sm"
+            variant="outline-secondary"
+            onClick={() => navigate(`/admin/users/${params.row.userId}/role`)}
+          >
+            수정
+          </Button>
+        ),
+      },
+    ],
+    [navigate]
+  );
+
+  return (
+    <div className="container-fluid py-3">
+      <Row className="g-2 align-items-end mb-2">
+        <Col xs={12} md={4}>
+          <InputGroup>
+            <InputGroup.Text>검색</InputGroup.Text>
+            <Form.Control
+              placeholder="이름 / 닉네임"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </InputGroup>
+        </Col>
+
+        <Col xs="auto">
+          <Form.Group>
+            <Form.Label className="small mb-1">역할</Form.Label>
+            <Form.Select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(0);
+              }}
+              size="sm"
+            >
+              <option value="">전체</option>
+              <option value="admin">관리자</option>
+              <option value="user">유저</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+
+        <Col xs="auto">
+          <Form.Group>
+            <Form.Label className="small mb-1">정지여부</Form.Label>
+            <Form.Select
+              value={suspendedFilter}
+              onChange={(e) => {
+                setSuspendedFilter(e.target.value);
+                setPage(0);
+              }}
+              size="sm"
+            >
+              <option value="">전체</option>
+              <option value="true">정지</option>
+              <option value="false">정상</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+
+        <Col xs="auto">
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={() => {
+              setQuery("");
+              setRoleFilter("");
+              setSuspendedFilter("");
+              setSortModel([]);
+              setPage(0);
+            }}
+          >
+            초기화
+          </Button>
+        </Col>
+      </Row>
+
+      <div style={{ width: "100%" }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          autoHeight
+          disableRowSelectionOnClick
+          pagination
+          paginationMode="server"
+          sortingMode="server"
+          rowCount={rowCount}
+          page={page}
+          pageSize={pageSize}
+          onPaginationModelChange={(model) => {
+            // v6: {pageSize, page}
+            setPage(model.page ?? 0);
+            setPageSize(model.pageSize ?? DEFAULT_SIZE);
+          }}
+          onSortModelChange={(model) => setSortModel(model)}
+          density="compact"
+          sx={{
+            // 다크/라이트 모드와 잘 어울리도록 테두리/글자색은 부트스트랩 변수에 맡겨도 OK
+            "& .MuiDataGrid-cell": { fontVariantNumeric: "tabular-nums" },
+          }}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default AdminUserListPage;

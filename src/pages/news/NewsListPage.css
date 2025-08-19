@@ -51,8 +51,7 @@
   width: 70%;
 }
 
-.news-card-list {
-}
+.news-card-list {}
 
 .news-card {
   display: flex;
@@ -79,7 +78,7 @@
   min-height: 200px;
 }
 
-.news-card-image-box > button {
+.news-card-image-box>button {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -144,8 +143,10 @@
 /* 기존 fixed 제거 후, 마지막 카드 아래에 자연스럽게 나타나도록 */
 .spinner-container {
   display: flex;
-  justify-content: center; /* 가운데 정렬 */
-  margin: 1rem 0; /* 위아래 여백 */
+  justify-content: center;
+  /* 가운데 정렬 */
+  margin: 1rem 0;
+  /* 위아래 여백 */
 }
 
 .spinner {
@@ -161,6 +162,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
