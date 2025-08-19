@@ -2,7 +2,7 @@
   min-height: 100vh;
   background-color: black;
   color: white;
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .news-list-page-header {
@@ -31,21 +31,24 @@
   gap: 1rem;
   margin-bottom: 2.5rem;
   justify-content: center;
+  width: 100%;
 }
 
 .search-bar select,
 .search-bar input {
   background-color: #1f2937;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.25rem;
+  border-radius: 0.5rem;
   border: none;
   color: white;
+  height: 3.5rem;
+  font-size: 1.2rem;
 }
 
 .search-bar input {
   padding-left: 1rem;
   padding-right: 1rem;
-  width: 50%;
+  width: 70%;
 }
 
 .news-card-list {}

@@ -25,9 +25,7 @@ const NewsCard = ({ item }) => {
 
   useEffect(() => {
     if (images.length === 0) return;
-    const intervalId = setInterval(() => {
-      handleNextClick();
-    }, 3000);
+    const intervalId = setInterval(handleNextClick, 3000);
     return () => clearInterval(intervalId);
   }, [handleNextClick, images.length]);
 
@@ -54,7 +52,6 @@ const NewsCard = ({ item }) => {
           <div className="placeholder">이미지 없음</div>
         )}
       </div>
-
       <div className="news-card-content">
         <h2>{item.title || "제목 없음"}</h2>
         <p
@@ -90,18 +87,32 @@ const DevSpaceLayout = () => {
   const [isLoading, setIsLoading] = useState(false);
   const loaderRef = useRef(null);
 
-  const fetchNews = async (page = 0) => {
+  const [searchType, setSearchType] = useState("전체");
+  const [searchText, setSearchText] = useState("");
+
+  const fetchNews = async (page = 0, reset = false) => {
     if (isLoading) return;
     setIsLoading(true);
 
     try {
-      const data = await api.get("/news-posts/", {
-        curPage: page,
-        pageSize: 10,
-      });
+      const params = new URLSearchParams();
+      params.append("curPage", page);
+      params.append("pageSize", 10);
 
+      if (searchType === "제목") {
+        params.append("title", searchText);
+      } else if (searchType === "내용") {
+        params.append("content", searchText);
+      } else if (searchType === "제목 + 내용") {
+        params.append("title", searchText);
+        params.append("content", searchText);
+      }
+
+      const data = await api.get(`/news-posts/?${params.toString()}`);
       const newItems = Array.isArray(data.contents) ? data.contents : [];
-      setNews((prev) => [...prev, ...newItems]);
+
+      // 페이지 단위로 그대로 붙이기 (중복 제거 제거)
+      setNews(reset ? newItems : [...news, ...newItems]);
       setCurPage(data.pageNumber ?? page);
       setTotalPages(data.totalPages ?? 0);
     } catch (err) {
@@ -111,11 +122,18 @@ const DevSpaceLayout = () => {
     }
   };
 
+  // 초기 로드 또는 검색
   useEffect(() => {
-    fetchNews(0);
-  }, []);
+    fetchNews(0, true);
+  }, [searchType, searchText]);
 
-  // IntersectionObserver 기반 무한 스크롤
+  const handleSearchKeyPress = (e) => {
+    if (e.key === "Enter") {
+      fetchNews(0, true);
+    }
+  };
+
+  // 무한 스크롤
   useEffect(() => {
     if (!loaderRef.current) return;
 
@@ -151,13 +169,22 @@ const DevSpaceLayout = () => {
       </header>
 
       <div className="search-bar">
-        <select>
-          <option>검색</option>
+        <select
+          value={searchType}
+          onChange={(e) => setSearchType(e.target.value)}
+        >
+          <option>전체</option>
           <option>제목</option>
           <option>내용</option>
           <option>제목 + 내용</option>
         </select>
-        <input type="text" placeholder="검색어를 입력…🔍" />
+        <input
+          type="text"
+          placeholder="검색어를 입력…🔍"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          onKeyDown={handleSearchKeyPress}
+        />
       </div>
 
       <div className="news-card-list">
@@ -165,7 +192,6 @@ const DevSpaceLayout = () => {
           <NewsCard key={item.id} item={item} />
         ))}
 
-        {/* 마지막 카드 아래 스피너 */}
         <div ref={loaderRef} className="spinner-container">
           {isLoading && <div className="spinner"></div>}
         </div>
