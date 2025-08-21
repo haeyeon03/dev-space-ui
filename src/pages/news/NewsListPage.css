@@ -1,7 +1,5 @@
 .news-list-page {
   min-height: 100vh;
-  background-color: black;
-  color: white;
   padding: 1rem;
 }
 
@@ -10,19 +8,17 @@
   margin-bottom: 2rem;
   height: 15rem;
   padding: 60px;
+
+  /* 배경 이미지 추가 */
+  background-image: url("https://i.postimg.cc/FRZLgCjL/Kakao-Talk-Video-2025-08-21-12-21-59.gif");
+  background-size: cover; /* 이미지 영역 꽉 채우기 */
+  background-position: center; /* 중앙 기준 위치 */
+  background-repeat: no-repeat; /* 반복 방지 */
 }
 
 .news-list-page-header h1 {
   font-size: 1.875rem;
   font-weight: 700;
-}
-
-.news-list-page-header .highlight {
-  color: #a855f7;
-}
-
-.news-list-page-header p {
-  color: #9ca3af;
 }
 
 .search-bar {
@@ -36,11 +32,9 @@
 
 .search-bar select,
 .search-bar input {
-  background-color: #1f2937;
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   border: none;
-  color: white;
   height: 3.5rem;
   font-size: 1.2rem;
 }
@@ -51,7 +45,8 @@
   width: 70%;
 }
 
-.news-card-list {}
+.news-card-list {
+}
 
 .news-card {
   display: flex;
@@ -66,7 +61,6 @@
 }
 
 .news-card-image-box {
-  background-color: #111827;
   width: 10rem;
   height: 10rem;
   display: flex;
@@ -78,16 +72,15 @@
   min-height: 200px;
 }
 
-.news-card-image-box>button {
+.news-card-image-box > button {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.3);
-  color: white;
   border: none;
   padding: 5px 10px;
   cursor: pointer;
   z-index: 2;
+  border-radius: 50%;
 }
 
 .prev-btn {
@@ -118,7 +111,6 @@
 }
 
 .news-card-content p {
-  color: #9ca3af;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -128,7 +120,6 @@
 
 .news-card-more {
   cursor: pointer;
-  color: rgb(255, 255, 255);
   display: inline-block;
   margin-top: 4px;
 }
