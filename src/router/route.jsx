@@ -1,12 +1,14 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
-import App from "../App"; // Toolpad AppProvider + Outlet
-import Layout from "../layouts/dashboard"; // 공통 레이아웃
+import App from "../App";
+import Layout from "../layouts/dashboard";
 import LoadingPage from "../pages/common/LoadingPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
+import ProtectedAdminRoute from "../components/common/ProtectedAdminRoute";
 import { Outlet } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
-// Lazy 로딩 + Suspense 헬퍼
+// Lazy helper
 const lazyPage = (importFn) => {
   const Component = lazy(importFn);
   return (
@@ -17,7 +19,7 @@ const lazyPage = (importFn) => {
 };
 
 // Pages
-const NewsListPage = () => lazyPage(() => import("../pages/news/NewsListPage")); // 기본 대시보드
+const NewsListPage = () => lazyPage(() => import("../pages/news/NewsListPage"));
 const NewsViewPage = () => lazyPage(() => import("../pages/news/NewsViewPage"));
 const BoardListPage = () =>
   lazyPage(() => import("../pages/board/BoardListPage"));
@@ -45,15 +47,15 @@ const AdminUserListPage = () =>
 const AdminUserWritePage = () =>
   lazyPage(() => import("../pages/admin/AdminUserWritePage"));
 
-const root = createBrowserRouter([
+const router = createBrowserRouter([
   {
-    element: <App />, // Toolpad Provider
+    element: <App />,
     children: [
       {
         path: "/",
-        element: <Layout />, // Toolpad Layout
+        element: <Layout />,
         children: [
-          // 뉴스(메인)
+          // 뉴스
           { index: true, element: <NewsListPage /> },
           { path: "news/:id", element: <NewsViewPage /> },
 
@@ -86,22 +88,23 @@ const root = createBrowserRouter([
             ],
           },
 
-          // 어드민
-
+          // Admin 전용
           {
             path: "admin",
             element: (
-              <ProtectedRoute requiredRole="ADMIN">
+              <ProtectedAdminRoute>
                 <Outlet />
-              </ProtectedRoute>
+              </ProtectedAdminRoute>
             ),
             children: [
+              { index: true, element: <Navigate to="overview" replace /> }, // ← 여기 추가
               { path: "overview", element: <AdminOverviewPage /> },
               { path: "report", element: <AdminReportListPage /> },
               { path: "user", element: <AdminUserListPage /> },
               { path: "user/write", element: <AdminUserWritePage /> },
             ],
           },
+
           // 인증 페이지
           {
             path: "signin",
@@ -125,4 +128,4 @@ const root = createBrowserRouter([
   },
 ]);
 
-export default root;
+export default router;

@@ -9,8 +9,8 @@ export default function Layout() {
   return (
     <DashboardLayout
       slots={{
-        toolbarActions: ToolbarActions, // 오른쪽 상단 툴바
-        sidebarFooter: SidebarFooterAccount, // 사이드바 하단
+        toolbarActions: ToolbarActions,
+        sidebarFooter: SidebarFooterAccount,
       }}
     >
       <Box sx={{ px: 20, py: 7 }}>
