@@ -2,18 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./NewsListPage.css";
 import { api } from "../../api/api-client";
 
+import { useNavigate } from "react-router-dom";
+
 const NewsCard = ({ item }) => {
+  const navigate = useNavigate();
   const images = item.images || (item.imageUrl ? [item.imageUrl] : []);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [showMoreNeeded, setShowMoreNeeded] = useState(false);
   const pRef = useRef();
-
-  useEffect(() => {
-    if (pRef.current) {
-      setShowMoreNeeded(pRef.current.scrollHeight > pRef.current.clientHeight);
-    }
-  }, [item.content]);
 
   const handlePrevClick = () => {
     setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -29,7 +24,10 @@ const NewsCard = ({ item }) => {
     return () => clearInterval(intervalId);
   }, [handleNextClick, images.length]);
 
-  const toggleExpand = () => setIsExpanded((prev) => !prev);
+  // 👉 더보기 버튼 클릭 시 상세 페이지로 이동
+  const goToDetail = () => {
+    navigate(`/news/${item.newsPostId}`);
+  };
 
   return (
     <div className="news-card">
@@ -53,28 +51,23 @@ const NewsCard = ({ item }) => {
         )}
       </div>
       <div className="news-card-content">
-        <h2>{item.title || "제목 없음"}</h2>
+        <h2
+          dangerouslySetInnerHTML={{ __html: item.title || "제목 없음" }}
+        ></h2>
         <p
           ref={pRef}
-          className={isExpanded ? "expanded" : ""}
-          style={
-            !isExpanded
-              ? {
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }
-              : {}
-          }
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
         >
           {item.content}
         </p>
-        {showMoreNeeded && (
-          <div className="news-card-more" onClick={toggleExpand}>
-            {isExpanded ? "접기" : "더 보기"}
-          </div>
-        )}
+        <div className="news-card-more" onClick={goToDetail}>
+          더 보기
+        </div>
       </div>
     </div>
   );
