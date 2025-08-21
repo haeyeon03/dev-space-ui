@@ -11,14 +11,15 @@ const NewsViewPage = () => {
   const [curCommentPage, setCurCommentPage] = useState(0);
   const [totalCommentPages, setTotalCommentPages] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingText, setEditingText] = useState("");
 
-  // 게시글 정보 불러오기
+  // 게시글 불러오기
   useEffect(() => {
     const fetchNewsItem = async () => {
       try {
         const data = await api.get(`/news-posts/${id}`);
         setNewsItem(data);
-        console.log(data);
       } catch (err) {
         console.error("게시글 조회 실패:", err);
       }
@@ -45,11 +46,11 @@ const NewsViewPage = () => {
     if (id) fetchComments(0, true);
   }, [id]);
 
-  // 댓글 입력
+  // 댓글 작성
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
-      await api.post(`/news-posts/${id}/comments`, { text: commentText });
+      await api.post(`/news-posts/${id}/comments`, { content: commentText });
       setCommentText("");
       fetchComments(0, true);
     } catch (err) {
@@ -57,7 +58,32 @@ const NewsViewPage = () => {
     }
   };
 
-  // 캐러셀 이미지
+  // 댓글 수정
+  const handleCommentUpdate = async (commentId) => {
+    if (!editingText.trim()) return;
+    try {
+      await api.put(`/news-posts/${id}/comments/${commentId}`, {
+        text: editingText,
+      });
+      setEditingCommentId(null);
+      setEditingText("");
+      fetchComments(curCommentPage, true);
+    } catch (err) {
+      console.error("댓글 수정 실패:", err);
+    }
+  };
+
+  // 댓글 삭제
+  const handleCommentDelete = async (commentId) => {
+    try {
+      await api.delete(`/news-posts/${id}/comments/${commentId}`);
+      fetchComments(curCommentPage, true);
+    } catch (err) {
+      console.error("댓글 삭제 실패:", err);
+    }
+  };
+
+  // 이미지 캐러셀
   const images =
     newsItem?.images || (newsItem?.imageUrl ? [newsItem.imageUrl] : []);
   const handlePrevClick = () => {
@@ -76,141 +102,123 @@ const NewsViewPage = () => {
   if (!newsItem) return <div className="news-view-page">로딩중...</div>;
 
   return (
-    <div className="news-view-page">
-      <table className="news-view-table">
-        <tbody>
-          <tr>
-            {/* 왼쪽: 사진 + 설명 */}
-            <td className="left-panel">
-              <table className="left-inner-table">
-                <tbody>
-                  {/* 사진 영역 */}
-                  <tr className="photo-row">
-                    <td>
-                      {images.length > 0 ? (
-                        <>
-                          <button
-                            className="carousel-btn prev-btn"
-                            onClick={handlePrevClick}
-                          >
-                            {"<"}
-                          </button>
-                          <img
-                            src={images[currentImageIndex]}
-                            alt={newsItem.title}
-                            className="carousel-image"
-                          />
-                          <button
-                            className="carousel-btn next-btn"
-                            onClick={handleNextClick}
-                          >
-                            {">"}
-                          </button>
-                        </>
-                      ) : (
-                        <div className="no-image">이미지 없음</div>
-                      )}
-                    </td>
-                  </tr>
+    <div className="news-view-page-grid">
+      <div className="left-section">
+        <div className="photo-area">
+          {images.length > 0 ? (
+            <>
+              <button
+                className="carousel-btn prev-btn"
+                onClick={handlePrevClick}
+              >
+                {"<"}
+              </button>
+              <img
+                src={images[currentImageIndex]}
+                alt={newsItem.title}
+                className="carousel-image"
+              />
+              <button
+                className="carousel-btn next-btn"
+                onClick={handleNextClick}
+              >
+                {">"}
+              </button>
+            </>
+          ) : (
+            <div className="no-image">이미지 없음</div>
+          )}
+        </div>
+        <div className="description-area">
+          <h2 className="news-title">{newsItem.title}</h2>
+          {newsItem.content.split(/(?<=[.?!])\s+/).map((sentence, idx) => (
+            <p key={idx} className="news-content">
+              {sentence}
+            </p>
+          ))}
+        </div>
+      </div>
 
-                  {/* 설명 영역 */}
-                  <tr className="description-row">
-                    <td>
-                      <h2 className="news-title">{newsItem.title}</h2>
-                      <p>{newsItem.content}</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
+      <div className="right-section">
+        <div className="comments-list">
+          {comments.map((c) => (
+            <div key={c.id} className="comment-item">
+              <div className="comment-header">
+                <div className="comment-profile">사진</div>
+                <span className="comment-author">{c.author}</span>
+              </div>
 
-            {/* 오른쪽: 댓글 영역 */}
-            <td className="right-panel">
-              <table className="right-inner-table">
-                <tbody>
-                  {/* 댓글 리스트 */}
-                  <tr className="comments-row">
-                    <td>
-                      <table className="w-full">
-                        <tbody>
-                          {comments.map((c) => (
-                            <tr key={c.id} className="comment-item">
-                              <td>
-                                <div className="comment-header">
-                                  <div className="comment-profile">사진</div>
-                                  <span className="comment-author">
-                                    {c.author}
-                                  </span>
-                                </div>
-                                <div className="comment-text">{c.text}</div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
+              {editingCommentId === c.id ? (
+                <>
+                  <input
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                  />
+                  <button onClick={() => handleCommentUpdate(c.id)}>
+                    저장
+                  </button>
+                  <button onClick={() => setEditingCommentId(null)}>
+                    취소
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="comment-text">{c.text}</div>
+                  <button
+                    onClick={() => {
+                      setEditingCommentId(c.id);
+                      setEditingText(c.text);
+                    }}
+                  >
+                    수정
+                  </button>
+                  <button onClick={() => handleCommentDelete(c.id)}>
+                    삭제
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
 
-                  {/* 페이지네이션 */}
-                  <tr className="comment-pagination-row">
-                    <td>
-                      <button
-                        className="comment-page-btn"
-                        disabled={curCommentPage <= 0}
-                        onClick={() => fetchComments(curCommentPage - 1)}
-                      >
-                        {"<"}
-                      </button>
-                      {[...Array(totalCommentPages)].map((_, n) => (
-                        <button
-                          key={n}
-                          className={`comment-page-btn ${
-                            n === curCommentPage ? "active" : ""
-                          }`}
-                          onClick={() => fetchComments(n)}
-                        >
-                          {n + 1}
-                        </button>
-                      ))}
-                      <button
-                        className="comment-page-btn"
-                        disabled={curCommentPage >= totalCommentPages - 1}
-                        onClick={() => fetchComments(curCommentPage + 1)}
-                      >
-                        {">"}
-                      </button>
-                    </td>
-                  </tr>
+        {/* 페이지네이션 버튼 */}
+        <div className="comment-pagination">
+          <button
+            disabled={curCommentPage <= 0}
+            onClick={() => fetchComments(curCommentPage - 1)}
+          >
+            {"<"}
+          </button>
+          {[...Array(totalCommentPages)].map((_, n) => (
+            <button
+              key={n}
+              className={n === curCommentPage ? "active" : ""}
+              onClick={() => fetchComments(n, true)}
+            >
+              {n + 1}
+            </button>
+          ))}
+          <button
+            disabled={curCommentPage >= totalCommentPages - 1}
+            onClick={() => fetchComments(curCommentPage + 1)}
+          >
+            {">"}
+          </button>
+        </div>
 
-                  {/* 댓글 입력창 */}
-                  <tr className="comment-input-row">
-                    <td>
-                      <div className="comment-input-container">
-                        <div className="comment-profile">사진</div>
-                        <input
-                          className="comment-input"
-                          placeholder="댓글을 입력..."
-                          value={commentText}
-                          onChange={(e) => setCommentText(e.target.value)}
-                          onKeyDown={(e) =>
-                            e.key === "Enter" && handleCommentSubmit()
-                          }
-                        />
-                        <button
-                          className="comment-submit-btn"
-                          onClick={handleCommentSubmit}
-                        >
-                          등록
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        {/* 댓글 입력 */}
+        <div className="comment-input-container">
+          <div className="comment-profile">사진</div>
+          <input
+            className="comment-input"
+            placeholder="댓글을 입력..."
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCommentSubmit()}
+          />
+          <button onClick={handleCommentSubmit}>등록</button>
+        </div>
+      </div>
     </div>
   );
 };
