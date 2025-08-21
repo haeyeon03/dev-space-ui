@@ -1,15 +1,16 @@
 import * as React from "react";
 import { Outlet } from "react-router-dom";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
-import { NAVIGATOR } from "./_navigator";
 import { useDispatch, useSelector } from "react-redux";
 import { selectSession, clearUser } from "./store/user-slice";
 import useCustomMove from "./hook/useCustomMove";
+import { getNavigator } from "./_navigator";
 
 export default function App() {
   // Redux의 userSlice → Toolpad session 형태로 변환된 값 사용
   const session = useSelector(selectSession);
-
+  const role = session?.user?.role;
+  const NAVIGATOR = getNavigator(role);
   const dispatch = useDispatch();
   const { moveToSignin } = useCustomMove();
 
