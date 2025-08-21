@@ -155,7 +155,7 @@ export default function BoardEditPage() {
                 )}
 
                 <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
-                    <button type="submit" style={primaryBtn}>수정 저장</button>
+                    <button type="submit" style={primaryBtn}>수정완료</button>
                     <button type="button" onClick={() => nav(-1)} style={ghostBtn}>취소</button>
                 </div>
             </form>
