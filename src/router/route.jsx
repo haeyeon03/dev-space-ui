@@ -101,7 +101,7 @@ const router = createBrowserRouter([
               { path: "overview", element: <AdminOverviewPage /> },
               { path: "report", element: <AdminReportListPage /> },
               { path: "user", element: <AdminUserListPage /> },
-              { path: "user/write", element: <AdminUserWritePage /> },
+              { path: "user/:userId", element: <AdminUserWritePage /> },
             ],
           },
 
