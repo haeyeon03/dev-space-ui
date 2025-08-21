@@ -106,6 +106,36 @@ export default function BoardListPage() {
 
   return (
     <div style={{ maxWidth: 960, margin: "24px auto", padding: "0 12px" }}>
+
+      {/* 카테고리 탭 + 정렬 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 8, alignItems: "center", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {CATEGORY_TABS.map((tab) => {
+            const active = category === tab.value || (!category && tab.value === "");
+            return (
+              <button key={tab.value}
+                onClick={() => { setCategory(tab.value); setCurPage(0); }}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 16,
+                  border: active ? "1px solid #fff" : "1px solid #aeaeae",
+                  background: active ? "#111" : "#fff",
+                  color: active ? "#fff" : "#111",
+                  cursor: "pointer",
+                }}>
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ justifySelf: "end" }}>
+          <select value={order} onChange={(e) => setOrder(e.target.value)}
+            style={{ height: 32, borderRadius: 6, border: "1px solid #bbb", padding: "0 8px" }}>
+            {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+
       {/* 상단 검색 + 글쓰기 */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <form onSubmit={onSubmitSearch}
@@ -146,35 +176,6 @@ export default function BoardListPage() {
         >
           글쓰기
         </Link>
-      </div>
-
-      {/* 카테고리 탭 + 정렬 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 8, alignItems: "center", marginBottom: 10 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {CATEGORY_TABS.map((tab) => {
-            const active = category === tab.value || (!category && tab.value === "");
-            return (
-              <button key={tab.value}
-                onClick={() => { setCategory(tab.value); setCurPage(0); }}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 16,
-                  border: active ? "1px solid #fff" : "1px solid #aeaeae",
-                  background: active ? "#111" : "#fff",
-                  color: active ? "#fff" : "#111",
-                  cursor: "pointer",
-                }}>
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ justifySelf: "end" }}>
-          <select value={order} onChange={(e) => setOrder(e.target.value)}
-            style={{ height: 32, borderRadius: 6, border: "1px solid #bbb", padding: "0 8px" }}>
-            {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </div>
       </div>
 
       {/* 목록 */}
