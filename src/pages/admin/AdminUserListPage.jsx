@@ -79,18 +79,18 @@ const AdminUserListPage = () => {
 
     const content = Array.isArray(data?.content) ? data.content : [];
     setRows(
-      content.map((u, idx) => ({
-        id: u.userId ?? idx, // DataGrid row key
+      (Array.isArray(content) ? content : []).filter(Boolean).map((u, idx) => ({
+        id: u.userId ?? `row-${idx}`,
         userId: u.userId ?? "",
         nickname: u.nickname ?? "",
-        gender: u.gender ?? "",
+        gender: (u.gender ?? "").toString(),
         role: u.role ?? "",
-        banned: !!u.banned,
+        banned: Boolean(u.banned),
         banEndAt: u.banEndAt ?? null,
       }))
     );
     setRowCount(Number.isFinite(data?.totalElements) ? data.totalElements : 0);
-    console.log("rows:", rows);
+    console.log("rows[0]", rows?.[0]);
   };
 
   // 최초 및 의존성 변경 시 로드
@@ -129,13 +129,13 @@ const AdminUserListPage = () => {
         headerName: "성별",
         width: 90,
         sortable: false,
-        valueGetter: (params) => {
-          const g = (params?.row?.gender || "").toUpperCase();
-          const label = g === "M" ? "남성" : "여성";
-          return label;
-          // if (g === "M") return "남성";
-          // if (g === "F") return "여성";
-          // return "기타";
+        renderCell: (params) => {
+          const raw = (params?.row?.gender ?? "")
+            .toString()
+            .trim()
+            .toUpperCase();
+          const label = raw === "M" ? "남성" : raw === "F" ? "여성" : "기타";
+          return <span>{label}</span>;
         },
       },
       {
@@ -174,7 +174,7 @@ const AdminUserListPage = () => {
       },
       {
         field: "actions",
-        headerName: "작업",
+        headerName: "수정",
         width: 120,
         sortable: false,
         renderCell: (params) => (
