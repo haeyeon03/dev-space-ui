@@ -4,6 +4,7 @@ import App from "../App"; // Toolpad AppProvider + Outlet
 import Layout from "../layouts/dashboard"; // 공통 레이아웃
 import LoadingPage from "../pages/common/LoadingPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
+import { Outlet } from "react-router-dom";
 
 // Lazy 로딩 + Suspense 헬퍼
 const lazyPage = (importFn) => {
@@ -44,9 +45,6 @@ const AdminUserListPage = () =>
 const AdminUserWritePage = () =>
   lazyPage(() => import("../pages/admin/AdminUserWritePage"));
 
-// API 테스트 페이지 추후 삭제 예정
-const ApiTestPage = () => lazyPage(() => import("../pages/ApiTestPage"));
-
 const root = createBrowserRouter([
   {
     element: <App />, // Toolpad Provider
@@ -55,9 +53,6 @@ const root = createBrowserRouter([
         path: "/",
         element: <Layout />, // Toolpad Layout
         children: [
-          // API 테스트 페이지 추후 삭제 예정
-          { path: "test", element: <ApiTestPage /> },
-
           // 뉴스(메인)
           { index: true, element: <NewsListPage /> },
           { path: "news/:id", element: <NewsViewPage /> },
@@ -92,8 +87,14 @@ const root = createBrowserRouter([
           },
 
           // 어드민
+
           {
             path: "admin",
+            element: (
+              <ProtectedRoute requiredRole="ADMIN">
+                <Outlet />
+              </ProtectedRoute>
+            ),
             children: [
               { path: "overview", element: <AdminOverviewPage /> },
               { path: "report", element: <AdminReportListPage /> },
