@@ -34,7 +34,7 @@
 .search-bar input {
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
-  border: none;
+  border: solid 1px;
   height: 3.5rem;
   font-size: 1.2rem;
 }
@@ -43,9 +43,6 @@
   padding-left: 1rem;
   padding-right: 1rem;
   width: 70%;
-}
-
-.news-card-list {
 }
 
 .news-card {
@@ -80,7 +77,12 @@
   padding: 5px 10px;
   cursor: pointer;
   z-index: 2;
-  border-radius: 50%;
+  border-radius: 40%;
+  opacity: 0.4;
+}
+
+.news-card-image-box > button:hover {
+  opacity: 1; /* 마우스를 올리면 선명하게 */
 }
 
 .prev-btn {
