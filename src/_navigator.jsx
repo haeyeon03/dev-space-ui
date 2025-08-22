@@ -25,13 +25,21 @@ export const USER_NAVIGATOR = [
 
 export const ADMIN_NAVIGATOR = [
   {
-    title: "Admin",
+    title: "Admin Overview",
     icon: <AdminPanelSettingsIcon />,
-    segment: "admin",
-    children: [
-      { title: "Overview", segment: "overview", pattern: "admin/overview" },
-      { title: "Report", segment: "report", pattern: "admin/report" },
-      { title: "User List", segment: "user", pattern: "admin/user" },
-    ],
+    segment: "admin/overview",
+    pattern: "/admin/overview",
   },
+  {
+    title: "User List",
+    icon: <AdminPanelSettingsIcon />,
+    segment: "admin/user",
+    pattern: "/admin/user",
+  },
+  // {
+  //   title: "Report",
+  //   icon: <AdminPanelSettingsIcon />,
+  //   segment: "admin/report",
+  //   pattern: "/admin/report",
+  // },
 ];

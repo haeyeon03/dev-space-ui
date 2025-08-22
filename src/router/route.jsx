@@ -1,12 +1,12 @@
+// router.jsx
 import { lazy, Suspense } from "react";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import App from "../App";
 import Layout from "../layouts/dashboard";
 import LoadingPage from "../pages/common/LoadingPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import ProtectedAdminRoute from "../components/common/ProtectedAdminRoute";
-import { Outlet } from "react-router-dom";
-import { Navigate } from "react-router-dom";
+import RootRedirect from "../components/common/RootDirect"; // 역할: "/"에서만 role별 리다이렉트
 
 // Lazy helper
 const lazyPage = (importFn) => {
@@ -53,10 +53,12 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Layout />,
+        element: <Layout />, // ✅ 여기서는 Layout만
         children: [
-          // 뉴스
-          { index: true, element: <NewsListPage /> },
+          { index: true, element: <RootRedirect /> }, // ✅ "/"에서만 실행
+
+          // ✅ 유저 기본 진입 경로 명시
+          { path: "news", element: <NewsListPage /> },
           { path: "news/:id", element: <NewsViewPage /> },
 
           // 게시판
@@ -88,7 +90,7 @@ const router = createBrowserRouter([
             ],
           },
 
-          // Admin 전용
+          // ✅ Admin (중첩 + index 리다이렉트)
           {
             path: "admin",
             element: (
@@ -97,7 +99,7 @@ const router = createBrowserRouter([
               </ProtectedAdminRoute>
             ),
             children: [
-              { index: true, element: <Navigate to="overview" replace /> }, // ← 여기 추가
+              { index: true, element: <Navigate to="overview" replace /> }, // /admin → /admin/overview
               { path: "overview", element: <AdminOverviewPage /> },
               { path: "report", element: <AdminReportListPage /> },
               { path: "user", element: <AdminUserListPage /> },
@@ -105,7 +107,7 @@ const router = createBrowserRouter([
             ],
           },
 
-          // 인증 페이지
+          // 인증
           {
             path: "signin",
             element: (
