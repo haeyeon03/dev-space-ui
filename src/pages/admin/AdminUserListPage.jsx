@@ -11,7 +11,7 @@ import {
 } from "react-bootstrap";
 import { DataGrid } from "@mui/x-data-grid";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../api/api-client"; // 경로는 프로젝트 구조에 맞춰 조정
+import { api } from "../../api/api-client";
 
 // 서버 페이징 기본값
 const DEFAULT_PAGE = 0; // Spring Page index (0-based)
@@ -181,7 +181,7 @@ const AdminUserListPage = () => {
           <Button
             size="sm"
             variant="outline-secondary"
-            onClick={() => navigate(`/admin/users/${params.row.userId}/role`)}
+            onClick={() => navigate(`/admin/user/${params.row.userId}`)}
           >
             수정
           </Button>
