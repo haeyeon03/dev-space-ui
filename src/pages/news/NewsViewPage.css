@@ -22,7 +22,6 @@
   height: 300px;
   overflow: hidden;
   border-radius: 8px;
-  background-color: #f0f0f0;
 }
 
 .carousel-image {
@@ -35,11 +34,15 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background-color: rgba(255, 255, 255, 0.7);
   border: none;
   padding: 5px 10px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 40%;
+  opacity: 0.4;
+}
+
+.carousel-btn:hover {
+  opacity: 1;
 }
 
 .prev-btn {
@@ -77,10 +80,9 @@
   gap: 10px;
   max-height: 500px;
   overflow-y: auto;
-  border: 1px solid #ddd;
+  border: 1px solid;
   padding: 10px;
   border-radius: 8px;
-  background-color: #fafafa;
 }
 
 .comment-item {
@@ -88,7 +90,6 @@
   flex-direction: column;
   gap: 5px;
   padding: 5px;
-  border-bottom: 1px solid #eee;
 }
 
 .comment-header {
@@ -101,8 +102,8 @@
 .comment-profile {
   width: 30px;
   height: 30px;
-  background-color: #bbb;
   border-radius: 50%;
+  border: dotted 1px;
 }
 
 .comment-text {
@@ -134,16 +135,9 @@
 
 .comment-pagination button {
   padding: 4px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid;
   border-radius: 4px;
-  background-color: #fff;
   cursor: pointer;
-}
-
-.comment-pagination button.active {
-  background-color: #007bff;
-  color: #fff;
-  border-color: #007bff;
 }
 
 .comment-pagination button:disabled {
@@ -162,18 +156,12 @@
   flex: 1;
   padding: 6px 10px;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid;
 }
 
 .comment-input-container button {
   padding: 6px 10px;
   border: none;
-  background-color: #007bff;
-  color: #fff;
   border-radius: 4px;
   cursor: pointer;
-}
-
-.comment-input-container button:hover {
-  background-color: #0056b3;
 }

@@ -33,9 +33,9 @@ const NewsViewPage = () => {
       const data = await api.get(
         `/news-posts/${id}/comments?curPage=${page}&pageSize=10`
       );
-      const newComments = Array.isArray(data.contents) ? data.contents : [];
+      const newComments = Array.isArray(data.content) ? data.content : [];
       setComments(reset ? newComments : [...comments, ...newComments]);
-      setCurCommentPage(data.pageNumber ?? page);
+      setCurCommentPage(data.number ?? page);
       setTotalCommentPages(data.totalPages ?? 0);
     } catch (err) {
       console.error("댓글 조회 실패:", err);
@@ -63,7 +63,7 @@ const NewsViewPage = () => {
     if (!editingText.trim()) return;
     try {
       await api.put(`/news-posts/${id}/comments/${commentId}`, {
-        text: editingText,
+        content: editingText,
       });
       setEditingCommentId(null);
       setEditingText("");
@@ -142,19 +142,19 @@ const NewsViewPage = () => {
       <div className="right-section">
         <div className="comments-list">
           {comments.map((c) => (
-            <div key={c.id} className="comment-item">
+            <div key={c.postCommentId} className="comment-item">
               <div className="comment-header">
                 <div className="comment-profile">사진</div>
-                <span className="comment-author">{c.author}</span>
+                <span className="comment-author">{c.userNickname}</span>
               </div>
 
-              {editingCommentId === c.id ? (
+              {editingCommentId === c.postCommentId ? (
                 <>
                   <input
                     value={editingText}
                     onChange={(e) => setEditingText(e.target.value)}
                   />
-                  <button onClick={() => handleCommentUpdate(c.id)}>
+                  <button onClick={() => handleCommentUpdate(c.postCommentId)}>
                     저장
                   </button>
                   <button onClick={() => setEditingCommentId(null)}>
@@ -163,16 +163,16 @@ const NewsViewPage = () => {
                 </>
               ) : (
                 <>
-                  <div className="comment-text">{c.text}</div>
+                  <div className="comment-text">{c.content}</div>
                   <button
                     onClick={() => {
-                      setEditingCommentId(c.id);
-                      setEditingText(c.text);
+                      setEditingCommentId(c.postCommentId);
+                      setEditingText(c.content);
                     }}
                   >
                     수정
                   </button>
-                  <button onClick={() => handleCommentDelete(c.id)}>
+                  <button onClick={() => handleCommentDelete(c.postCommentId)}>
                     삭제
                   </button>
                 </>
@@ -208,7 +208,7 @@ const NewsViewPage = () => {
 
         {/* 댓글 입력 */}
         <div className="comment-input-container">
-          <div className="comment-profile">사진</div>
+          <div className="comment-profile"></div>
           <input
             className="comment-input"
             placeholder="댓글을 입력..."
