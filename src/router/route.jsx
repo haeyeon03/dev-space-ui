@@ -6,6 +6,7 @@ import Layout from "../layouts/dashboard";
 import LoadingPage from "../pages/common/LoadingPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import ProtectedAdminRoute from "../components/common/ProtectedAdminRoute";
+import AuthGuard from "../components/common/AuthGuard";
 import RootRedirect from "../components/common/RootDirect"; // 역할: "/"에서만 role별 리다이렉트
 
 // Lazy helper
@@ -49,7 +50,11 @@ const AdminUserWritePage = () =>
 
 const router = createBrowserRouter([
   {
-    element: <App />,
+    element: (
+      <AuthGuard>
+        <App />
+      </AuthGuard>
+    ),
     children: [
       {
         path: "/",
