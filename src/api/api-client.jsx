@@ -132,6 +132,9 @@ export class APIClient {
   async delete(url, data) {
     return (await this.instance.delete(url, { data })).data;
   }
+  async patch(url, data) {
+    return (await this.instance.patch(url, data)).data;
+  }
   // 파일(ex. 이미지 등) 업로드
   async postForm(url, formData) {
     return (await this.instance.post(url, formData)).data;

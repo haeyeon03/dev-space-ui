@@ -241,7 +241,7 @@ const AdminUserWritePage = () => {
             <Card.Body>
               <Card.Title>기본 정보</Card.Title>
 
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" disabled>
                 <Form.Label>닉네임</Form.Label>
                 <Form.Control
                   value={form.nickname}
@@ -252,7 +252,7 @@ const AdminUserWritePage = () => {
                 />
               </Form.Group>
 
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" disabled>
                 <Form.Label>성별</Form.Label>
                 <Form.Select
                   value={form.gender}
