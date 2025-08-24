@@ -225,7 +225,7 @@ const NewsViewPage = () => {
             <div className="comment-pagination">
               <button
                 disabled={curCommentPage <= 0}
-                onClick={() => fetchComments(curCommentPage - 1, true)} // reset=true
+                onClick={() => fetchComments(curCommentPage - 1, true)}
               >
                 {"<"}
               </button>
@@ -233,30 +233,36 @@ const NewsViewPage = () => {
                 <button
                   key={n}
                   className={n === curCommentPage ? "active" : ""}
-                  onClick={() => fetchComments(n, true)} // reset=true
+                  onClick={() => fetchComments(n, true)}
                 >
                   {n + 1}
                 </button>
               ))}
               <button
                 disabled={curCommentPage >= totalCommentPages - 1}
-                onClick={() => fetchComments(curCommentPage + 1, true)} // reset=true
+                onClick={() => fetchComments(curCommentPage + 1, true)}
               >
                 {">"}
               </button>
             </div>
 
-            <div className="comment-input-container">
+            {/* 댓글 입력 부분: form으로 감싸기 */}
+            <form
+              className="comment-input-container"
+              onSubmit={(e) => {
+                e.preventDefault(); // Enter 기본 동작 방지
+                handleCommentSubmit();
+              }}
+            >
               <div className="comment-profile"></div>
               <input
                 className="comment-input"
                 placeholder="댓글을 입력..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCommentSubmit()}
               />
-              <button onClick={handleCommentSubmit}>등록</button>
-            </div>
+              <button type="submit">등록</button>
+            </form>
           </div>
         </div>
       </div>

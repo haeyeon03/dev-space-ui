@@ -1,10 +1,11 @@
-/* 전체 레이아웃 */
+/* ------------------ 전체 레이아웃 ------------------ */
 .news-view-page-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: "Noto Sans KR", Arial, sans-serif;
+  min-height: 100vh;
 }
 
 /* 좌측: 이미지 + 내용 */
@@ -17,15 +18,16 @@
 .photo-area {
   position: relative;
   width: 100%;
-  height: 300px;
+  height: 20rem;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px;
 }
 
 .carousel-image {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .carousel-btn {
@@ -33,32 +35,40 @@
   top: 50%;
   transform: translateY(-50%);
   border: none;
-  padding: 5px 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.1em;
   cursor: pointer;
-  border-radius: 40%;
-  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s ease;
+  z-index: 2;
 }
-
-.carousel-btn:hover {
-  opacity: 1;
-}
-
 .prev-btn {
-  left: 10px;
+  left: 12px;
 }
 .next-btn {
-  right: 10px;
+  right: 12px;
 }
 
 .description-area {
-  padding: 10px;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px;
 }
+
 .news-title {
-  font-size: 1.5em;
-  margin-bottom: 10px;
+  font-size: 1.8em;
+  font-weight: 700;
+  margin-bottom: 16px;
 }
+
 .news-content {
-  margin-bottom: 8px;
+  font-size: 1em;
+  margin-bottom: 10px;
+  line-height: 1.7;
 }
 
 /* 우측: 댓글 영역 */
@@ -69,41 +79,41 @@
   position: relative;
 }
 
-/* 댓글 섹션 스크롤 따라오게 */
 .comments-section-wrapper {
   position: sticky;
-  top: 20px; /* 상단에서 20px 떨어진 위치에서 고정 */
+  top: 20px;
 }
 
 .comments-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: calc(100vh - 150px); /* 화면 높이에 맞춰 조정 */
+  gap: 12px;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-height: calc(100vh - 120px);
   overflow-y: auto;
-  border: 1px solid;
-  padding: 10px;
-  border-radius: 8px;
 }
 
 .comment-page-info {
-  font-size: 0.9em;
-  margin-bottom: 5px;
+  font-size: 0.85em;
   text-align: right;
 }
 
 .comments-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* 댓글 카드 */
 .comment-item {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 8px;
-  border-bottom: 1px solid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px;
 }
 
 .comment-header {
@@ -114,54 +124,65 @@
 }
 
 .comment-profile {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: dotted 1px;
+  flex-shrink: 0;
 }
 
-.comment-actions {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 5px; /* 버튼과 내용 사이 간격 */
-  flex-wrap: wrap;
-  justify-content: flex-end; /* 버튼들을 오른쪽으로 정렬 */
-}
-
-.comment-actions button {
-  padding: 3px 8px;
-  font-size: 0.85em;
-  cursor: pointer;
-  border: 1px solid;
-  border-radius: 4px;
+.comment-author {
+  font-size: 0.95em;
 }
 
 .comment-text {
   font-size: 0.95em;
-  line-height: 1.4;
-  padding-left: 5px;
+  line-height: 1.5;
+  padding-left: 2px;
 }
 
 .comment-edit-input {
   width: 100%;
-  padding: 5px;
+  padding: 8px 10px;
   font-size: 0.95em;
+  border: 1px solid;
+  border-radius: 6px;
+  outline: none;
+}
+
+/* 댓글 액션 버튼 */
+.comment-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.comment-actions button {
+  padding: 4px 10px;
+  font-size: 0.85em;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  transition: background 0.2s ease;
 }
 
 /* 페이지네이션 버튼 */
 .comment-pagination {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   justify-content: center;
   align-items: center;
-  margin-top: 5px;
+  margin-top: 8px;
 }
 
 .comment-pagination button {
-  padding: 4px 8px;
+  padding: 5px 10px;
   border: 1px solid;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 0.85em;
+  transition: 0.2s ease;
 }
 
 .comment-pagination button:disabled {
@@ -174,57 +195,71 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid;
 }
 
 .comment-input {
   flex: 1;
-  padding: 6px 10px;
-  border-radius: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
   border: 1px solid;
+  font-size: 0.95em;
+  outline: none;
 }
 
 .comment-input-container button {
-  padding: 6px 10px;
+  padding: 8px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 0.9em;
+  transition: 0.2s ease;
 }
 
-/* 반응형: 모바일 화면 */
+/* ------------------ 반응형 ------------------ */
+@media screen and (max-width: 1024px) {
+  .news-view-page-grid {
+    grid-template-columns: 1.5fr 1fr;
+    gap: 15px;
+    padding: 15px;
+  }
+  .photo-area {
+    height: 260px;
+  }
+}
+
 @media screen and (max-width: 768px) {
   .news-view-page-grid {
     grid-template-columns: 1fr;
-    gap: 15px;
-    padding: 10px;
   }
-
   .photo-area {
-    height: 200px;
+    height: 220px;
   }
-
+  .comments-section-wrapper {
+    position: relative;
+    top: auto;
+  }
   .comments-section {
     max-height: 400px;
   }
+}
 
-  .carousel-btn {
-    padding: 3px 6px;
+@media screen and (max-width: 480px) {
+  .photo-area {
+    height: 160px;
   }
-
   .news-title {
     font-size: 1.2em;
   }
-
   .news-content {
     font-size: 0.9em;
   }
-
-  .comment-actions button {
-    margin-bottom: 5px;
-  }
-
   .comment-input,
   .comment-edit-input {
-    font-size: 0.9em;
+    font-size: 0.85em;
+  }
+  .comments-section {
+    max-height: 300px;
   }
 }

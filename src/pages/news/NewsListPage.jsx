@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import "./NewsListPage.css";
-import { api } from "../../api/api-client";
-
 import { useNavigate } from "react-router-dom";
+import { api } from "../../api/api-client";
+import "./NewsListPage.css";
 
+// ==================== NewsCard 컴포넌트 ====================
 const NewsCard = ({ item }) => {
   const navigate = useNavigate();
   const images = item.images || (item.imageUrl ? [item.imageUrl] : []);
@@ -18,13 +18,14 @@ const NewsCard = ({ item }) => {
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   }, [images.length]);
 
+  // 자동 슬라이드
   useEffect(() => {
-    if (images.length === 0) return;
+    if (!images.length) return;
     const intervalId = setInterval(handleNextClick, 3000);
     return () => clearInterval(intervalId);
   }, [handleNextClick, images.length]);
 
-  // 👉 더보기 버튼 클릭 시 상세 페이지로 이동
+  // 상세 페이지 이동
   const goToDetail = () => {
     navigate(`/news/${item.newsPostId}`);
   };
@@ -50,6 +51,7 @@ const NewsCard = ({ item }) => {
           <div className="placeholder">이미지 없음</div>
         )}
       </div>
+
       <div className="news-card-content">
         <h2
           dangerouslySetInnerHTML={{ __html: item.title || "제목 없음" }}
@@ -73,38 +75,34 @@ const NewsCard = ({ item }) => {
   );
 };
 
+// ==================== DevSpaceLayout ====================
 const DevSpaceLayout = () => {
   const [news, setNews] = useState([]);
   const [curPage, setCurPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const loaderRef = useRef(null);
-
   const [searchType, setSearchType] = useState("전체");
   const [searchText, setSearchText] = useState("");
 
+  // 뉴스 데이터 불러오기
   const fetchNews = async (page = 0, reset = false) => {
     if (isLoading) return;
     setIsLoading(true);
-
     try {
       const params = new URLSearchParams();
       params.append("curPage", page);
       params.append("pageSize", 10);
 
-      if (searchType === "제목") {
-        params.append("title", searchText);
-      } else if (searchType === "내용") {
-        params.append("content", searchText);
-      } else if (searchType === "제목 + 내용") {
+      if (searchType === "제목") params.append("title", searchText);
+      else if (searchType === "내용") params.append("content", searchText);
+      else if (searchType === "제목 + 내용") {
         params.append("title", searchText);
         params.append("content", searchText);
       }
 
       const data = await api.get(`/news-posts/?${params.toString()}`);
       const newItems = Array.isArray(data.contents) ? data.contents : [];
-
-      // 페이지 단위로 그대로 붙이기 (중복 제거 제거)
       setNews(reset ? newItems : [...news, ...newItems]);
       setCurPage(data.pageNumber ?? page);
       setTotalPages(data.totalPages ?? 0);
@@ -115,15 +113,13 @@ const DevSpaceLayout = () => {
     }
   };
 
-  // 초기 로드 또는 검색
+  // 초기 로드 및 검색
   useEffect(() => {
     fetchNews(0, true);
   }, [searchType, searchText]);
 
   const handleSearchKeyPress = (e) => {
-    if (e.key === "Enter") {
-      fetchNews(0, true);
-    }
+    if (e.key === "Enter") fetchNews(0, true);
   };
 
   // 무한 스크롤
@@ -144,19 +140,22 @@ const DevSpaceLayout = () => {
     );
 
     observer.observe(loaderRef.current);
-    return () => {
-      if (loaderRef.current) observer.unobserve(loaderRef.current);
-    };
+    return () => loaderRef.current && observer.unobserve(loaderRef.current);
   }, [isLoading, curPage, totalPages]);
 
   return (
     <div className="news-list-page">
       <header className="news-list-page-header">
+        <video className="header-video" autoPlay muted loop playsInline>
+          <source
+            src="https://hyojunbang9.github.io/MediaFile/DevSpace-Header.mp4"
+            type="video/mp4"
+          />
+        </video>
         <h1>
-          개발자들의 소통공간{" "}
+          개발자들의 소통공간
           <span className="highlight">
-            <br />
-            DevSpace
+            <br /> DevSpace
           </span>
         </h1>
       </header>
