@@ -37,6 +37,8 @@ const MyInfoViewPage = () =>
   lazyPage(() => import("../pages/mypage/MyInfoViewPage"));
 const MyInfoWritePage = () =>
   lazyPage(() => import("../pages/mypage/MyInfoWritePage"));
+const MyInfoEditPage = () =>
+  lazyPage(() => import("../pages/mypage/MyInfoEditPage"));
 const SignInPage = () => lazyPage(() => import("../pages/auth/SignInPage"));
 const SignUpPage = () => lazyPage(() => import("../pages/auth/SignUpPage"));
 const AdminOverviewPage = () =>
@@ -95,6 +97,7 @@ const router = createBrowserRouter([
             path: "mypage",
             children: [
               { index: true, element: <MyInfoViewPage /> },
+              { path: "edit", element: <MyInfoEditPage /> },
               { path: "write", element: <MyInfoWritePage /> },
             ],
           },

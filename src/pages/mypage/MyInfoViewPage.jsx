@@ -1,38 +1,41 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/pages/mypage/MyInfoViewPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-/**
- * MyInfoViewPage.jsx — 마이페이지 전체 기능 (조회/수정/이미지/비번/이메일/내 글)
- *
- * ▶ 사용법
- *  1) 라우터에 <Route path="/mypage" element={<MyInfoViewPage/>}/> 추가
- *  2) 로그인 후 localStorage.setItem('token', '...') 로 토큰 저장되어 있어야 함
- *  3) 필요시 .env에 VITE_API_BASE 설정 (기본 "/api")
- */
-
-const API_BASE = import.meta.env.VITE_API_BASE || "/api"; // 예: http://localhost:8080/api
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 const MYPAGE = `${API_BASE}/mypage`;
 
 function authHeaders(extra = {}) {
   const t = localStorage.getItem("token");
-  return {
-    ...(t ? { Authorization: `Bearer ${t}` } : {}),
-    ...extra,
-  };
+  return { ...(t ? { Authorization: `Bearer ${t}` } : {}), ...extra };
 }
-
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, options);
   const ct = res.headers.get("content-type") || "";
   const isJson = ct.includes("application/json");
   const data = isJson ? await res.json().catch(() => ({})) : null;
   if (!res.ok) {
-    const msg = data?.message || data?.error || res.statusText;
+    const msg = (data && (data.message || data.error)) || res.statusText;
     throw new Error(msg || `HTTP ${res.status}`);
   }
-  return data;
+  return data ?? {}; // null 방지
 }
 
+// 라벨/날짜
+const CATEGORY_LABELS = { dev: "자유게시판", design: "디자인", ai: "뉴스", job: "취업", etc: "기타" };
+const toLabel = (v) => CATEGORY_LABELS[String(v ?? "").toLowerCase()] ?? String(v ?? "");
+const fmtDate = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yy}.${mm}.${dd}`;
+};
+
 export default function MyInfoViewPage() {
+  const nav = useNavigate();
+
   // 프로필
   const [profile, setProfile] = useState({
     userId: "",
@@ -43,329 +46,204 @@ export default function MyInfoViewPage() {
     profileImageUrl: "",
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
 
-  // 이미지 업로드
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState("");
-  const fileInputRef = useRef(null);
-
-  // 내 글 목록
+  // 활동 내역 / 즐겨찾기
   const [posts, setPosts] = useState([]);
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(0);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [favs, setFavs] = useState([]);
+  const [favsLoading, setFavsLoading] = useState(false);
 
-  // 비밀번호 변경
-  const [pwd, setPwd] = useState({ currentPassword: "", newPassword: "" });
-  // 이메일 변경
-  const [newEmail, setNewEmail] = useState("");
-
+  // 초기 로드
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const data = await fetchJSON(`${MYPAGE}`, {
-          headers: authHeaders(),
-        });
+        const data = await fetchJSON(`${MYPAGE}`, { headers: authHeaders() });
+        const d = (data && typeof data === "object") ? data : {};
         setProfile({
-          userId: data.userId || "",
-          nickname: data.nickname || "",
-          email: data.email || "",
-          gender: data.gender || "",
-          birthdate: data.birthdate || "",
-          profileImageUrl: data.profileImageUrl || "",
+          userId: d.userId ?? "",
+          nickname: d.nickname ?? "",
+          email: d.email ?? "",
+          gender: d.gender ?? "",
+          birthdate: d.birthdate ?? "",
+          profileImageUrl: d.profileImageUrl ?? "",
         });
-        setErr("");
       } catch (e) {
-        setErr(e.message || "내 정보 조회 실패");
+        console.error("[MyInfoView] profile load failed:", e);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  const loadPosts = async (p = page, s = size) => {
-    try {
-      setPostsLoading(true);
-      const qp = new URLSearchParams({ page: String(p), size: String(s) }).toString();
-      const data = await fetchJSON(`${MYPAGE}/postlist?${qp}`, {
-        headers: authHeaders(),
-      });
-      // Spring Page 구조 가정
-      setPosts(data.content || []);
-      setTotalPages(data.totalPages || 0);
-    } catch (e) {
-      setErr(e.message || "내 글 조회 실패");
-    } finally {
-      setPostsLoading(false);
-    }
-  };
-
+  // 활동 내역: 최근 10건
   useEffect(() => {
-    loadPosts(0, size);
-  }, [size]);
+    (async () => {
+      try {
+        setPostsLoading(true);
+        const data = await fetchJSON(`${MYPAGE}/postlist?page=0&size=10`, { headers: authHeaders() });
+        setPosts(Array.isArray(data?.content) ? data.content : []);
+      } catch (e) {
+        console.error("[MyInfoView] posts load failed:", e);
+      } finally {
+        setPostsLoading(false);
+      }
+    })();
+  }, []);
 
-  // -------- 액션 --------
-  const onSaveProfile = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMsg("");
-    setErr("");
-    try {
-      const body = {
-        nickname: profile.nickname || null,
-        gender: profile.gender || null,
-        birthdate: profile.birthdate || null,
-      };
-      const data = await fetchJSON(`${MYPAGE}/update`, {
-        method: "PUT",
-        headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify(body),
-      });
-      setProfile((p) => ({ ...p, ...data }));
-      setMsg("프로필이 저장되었습니다.");
-    } catch (e2) {
-      setErr(e2.message || "프로필 저장 실패");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const onSelectFile = (e) => {
-    const f = e.target.files?.[0];
-    setFile(f || null);
-    if (f) {
-      const url = URL.createObjectURL(f);
-      setPreview(url);
-    } else {
-      setPreview("");
-    }
-  };
-
-  const onUploadImage = async () => {
-    if (!file) return;
-    setMsg("");
-    setErr("");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const data = await fetchJSON(`${MYPAGE}/profile-image`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: fd,
-      });
-      setProfile((p) => ({ ...p, ...data }));
-      setMsg("프로필 이미지가 업데이트되었습니다.");
-      setPreview("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setFile(null);
-    } catch (e) {
-      setErr(e.message || "이미지 업로드 실패");
-    }
-  };
-
-  const onChangePassword = async (e) => {
-    e.preventDefault();
-    setMsg("");
-    setErr("");
-    try {
-      await fetchJSON(`${MYPAGE}/password`, {
-        method: "PUT",
-        headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify(pwd),
-      });
-      setMsg("비밀번호가 변경되었습니다.");
-      setPwd({ currentPassword: "", newPassword: "" });
-    } catch (e2) {
-      setErr(e2.message || "비밀번호 변경 실패");
-    }
-  };
-
-  const onChangeEmail = async (e) => {
-    e.preventDefault();
-    setMsg("");
-    setErr("");
-    try {
-      await fetchJSON(`${MYPAGE}/email`, {
-        method: "PUT",
-        headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ newEmail }),
-      });
-      setMsg("이메일이 변경되었습니다.");
-      setProfile((p) => ({ ...p, email: newEmail }));
-      setNewEmail("");
-    } catch (e2) {
-      setErr(e2.message || "이메일 변경 실패");
-    }
-  };
-
-  const onDeactivate = async () => {
-    if (!confirm("정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
-    setMsg("");
-    setErr("");
-    try {
-      await fetchJSON(`${MYPAGE}/deactivate`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      setMsg("계정이 비활성화되었습니다. 로그아웃 후 재로그인 불가 정책이라면 주의하세요.");
-    } catch (e2) {
-      setErr(e2.message || "탈퇴 처리 실패");
-    }
-  };
+  // 즐겨찾기
+  useEffect(() => {
+    (async () => {
+      try {
+        setFavsLoading(true);
+        const data = await fetchJSON(`${MYPAGE}/bookmarks?page=0&size=6`, { headers: authHeaders() });
+        const list = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+        setFavs(list);
+      } catch (e) {
+        console.warn("[MyInfoView] bookmarks empty or failed:", e);
+        setFavs([]);
+      } finally {
+        setFavsLoading(false);
+      }
+    })();
+  }, []);
 
   const profileImageSrc = useMemo(() => {
     const u = profile.profileImageUrl || "";
     if (!u) return "";
-    if (u.startsWith("http")) return u;
-    return u; // 상대경로 그대로 사용
+    return u.startsWith("http") ? u : u;
   }, [profile.profileImageUrl]);
 
   return (
-    <div className="mx-auto max-w-5xl p-6 space-y-8">
-      <h1 className="text-2xl font-bold">마이페이지</h1>
+    <div style={pageWrap}>
+      <h1 style={pageTitle}>마이페이지</h1>
 
-      {(msg || err) && (
-        <div className={`p-3 rounded border ${err ? "border-red-300 bg-red-50" : "border-green-300 bg-green-50"}`}>
-          <p className="text-sm">{err || msg}</p>
+      {msg && (
+        <div style={{ ...alertBar, background: "var(--mui-palette-success-light)", color: "var(--mui-palette-success-contrastText)" }}>
+          {msg}
         </div>
       )}
 
-      {/* 프로필 조회/수정 */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        <div className="md:col-span-1 flex flex-col items-center gap-3">
-          <div className="w-36 h-36 rounded-full overflow-hidden border bg-gray-100">
-            {profileImageSrc ? (
-              <img src={profileImageSrc} alt="profile" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
-            )}
-          </div>
+      <div style={mainGrid}>
+        {/* 좌측: 내 정보 + 즐겨찾기 */}
+        <div style={{ display: "grid", gap: 14 }}>
+          {/* 내 정보 */}
+          <div style={card}>
+            <div style={cardHeader}>
+              <div style={cardTitle}>내 정보</div>
+              <button style={chipBtn} onClick={() => nav("/mypage/edit")}>수정하기</button>
+            </div>
 
-          <div className="w-full">
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={onSelectFile} className="block w-full text-sm" />
-            {preview && (
-              <div className="mt-2">
-                <img src={preview} alt="preview" className="w-40 h-40 object-cover rounded" />
+            <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 12, alignItems: "center" }}>
+              <div style={avatarBox}>
+                {profileImageSrc ? (
+                  <img src={profileImageSrc} alt="profile" style={avatarImg} />
+                ) : (
+                  <div style={avatarFallback}>{(profile.nickname || profile.userId || "U").slice(0, 2).toUpperCase()}</div>
+                )}
               </div>
+
+              <dl style={dlList}>
+                <div style={row}>
+                  <dt style={dt}>아이디</dt>
+                  <dd style={dd}>{loading ? "-" : (profile.userId || "-")}</dd>
+                </div>
+                <div style={row}>
+                  <dt style={dt}>닉네임</dt>
+                  <dd style={dd}>{loading ? "-" : (profile.nickname || "-")}</dd>
+                </div>
+                <div style={row}>
+                  <dt style={dt}>이메일</dt>
+                  <dd style={dd}>{loading ? "-" : (profile.email || "-")}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          {/* 즐겨찾기 */}
+          <div style={card}>
+            <div style={cardHeader}>
+              <div style={cardTitle}>즐겨찾기</div>
+              <button style={chipBtn} onClick={() => nav("/bookmarks")}>더보기</button>
+            </div>
+
+            {favsLoading ? (
+              <div style={empty}>불러오는 중...</div>
+            ) : favs.length === 0 ? (
+              <div style={empty}>즐겨찾기한 글이 없습니다.</div>
+            ) : (
+              <ul style={listWrap}>
+                {favs.slice(0, 6).map((it, idx) => (
+                  <li key={it.boardPostId ?? idx} style={listRow}>
+                    <div style={ellipsis}>
+                      <span style={{ color: "var(--mui-palette-text-secondary)" }}>[{toLabel(it.category)}]</span>{" "}
+                      {it.title}
+                    </div>
+                    <div style={dateText}>{fmtDate(it.createdAt)}</div>
+                  </li>
+                ))}
+              </ul>
             )}
-            <button onClick={onUploadImage} disabled={!file} className="mt-2 px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50">
-              프로필 이미지 업로드
-            </button>
           </div>
         </div>
 
-        <form onSubmit={onSaveProfile} className="md:col-span-2 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm text-gray-600">사용자 ID</label>
-              <input className="mt-1 w-full border rounded px-3 py-2 bg-gray-50" value={profile.userId} disabled />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">이메일</label>
-              <input className="mt-1 w-full border rounded px-3 py-2 bg-gray-50" value={profile.email || ""} disabled />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">닉네임</label>
-              <input className="mt-1 w-full border rounded px-3 py-2" value={profile.nickname}
-                onChange={(e) => setProfile((p) => ({ ...p, nickname: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">성별</label>
-              <select className="mt-1 w-full border rounded px-3 py-2" value={profile.gender || ""}
-                onChange={(e) => setProfile((p) => ({ ...p, gender: e.target.value }))}>
-                <option value="">선택</option>
-                <option value="M">남성</option>
-                <option value="F">여성</option>
-                <option value="O">기타</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">생년월일</label>
-              <input type="date" className="mt-1 w-full border rounded px-3 py-2" value={profile.birthdate || ""}
-                onChange={(e) => setProfile((p) => ({ ...p, birthdate: e.target.value }))} />
-            </div>
+        {/* 우측: 내 활동 내역 */}
+        <div style={cardTall}>
+          <div style={cardHeader}>
+            <div style={cardTitle}>내 활동 내역</div>
+            <button style={chipBtn} onClick={() => nav("/board?mine=me")}>더보기</button>
           </div>
-          <button type="submit" disabled={saving} className="px-4 py-2 rounded bg-green-600 text-white disabled:opacity-50">
-            {saving ? "저장 중..." : "프로필 저장"}
-          </button>
-        </form>
-      </section>
 
-      {/* 이메일 변경 / 비밀번호 변경 */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <form onSubmit={onChangeEmail} className="space-y-3 p-4 border rounded">
-          <h2 className="font-semibold">이메일 변경</h2>
-          <input className="w-full border rounded px-3 py-2" placeholder="새 이메일" value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)} />
-          <button className="px-4 py-2 rounded bg-indigo-600 text-white">이메일 변경</button>
-        </form>
-
-        <form onSubmit={onChangePassword} className="space-y-3 p-4 border rounded">
-          <h2 className="font-semibold">비밀번호 변경</h2>
-          <input className="w-full border rounded px-3 py-2" type="password" placeholder="현재 비밀번호"
-            value={pwd.currentPassword}
-            onChange={(e) => setPwd((s) => ({ ...s, currentPassword: e.target.value }))} />
-          <input className="w-full border rounded px-3 py-2" type="password" placeholder="새 비밀번호"
-            value={pwd.newPassword}
-            onChange={(e) => setPwd((s) => ({ ...s, newPassword: e.target.value }))} />
-          <button className="px-4 py-2 rounded bg-indigo-600 text-white">비밀번호 변경</button>
-        </form>
-      </section>
-
-      {/* 내 글 목록 */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">내가 쓴 글</h2>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">페이지 크기</label>
-            <select className="border rounded px-2 py-1" value={size} onChange={(e) => setSize(Number(e.target.value))}>
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="border rounded divide-y">
           {postsLoading ? (
-            <div className="p-4 text-sm text-gray-500">불러오는 중...</div>
+            <div style={empty}>불러오는 중...</div>
           ) : posts.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500">작성한 글이 없습니다.</div>
+            <div style={empty}>작성한 글이 없습니다.</div>
           ) : (
-            posts.map((p) => (
-              <article key={p.boardPostId} className="p-4">
-                <div className="text-sm text-gray-400">{new Date(p.createdAt).toLocaleString()}</div>
-                <h3 className="font-medium">{p.title}</h3>
-                <div className="text-xs text-gray-500">카테고리: {p.category} · 조회 {p.viewCount} · 댓글 {p.commentCount}</div>
-              </article>
-            ))
+            <ul style={listWrap}>
+              {posts.map((p) => (
+                <li key={p.boardPostId} style={listRow}>
+                  <div style={ellipsis}>
+                    <span style={{ color: "var(--mui-palette-text-secondary)" }}>[{toLabel(p.category)}]</span>{" "}
+                    {p.title}
+                  </div>
+                  <div style={dateText}>{fmtDate(p.createdAt)}</div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-
-        <div className="flex items-center justify-between">
-          <button className="px-3 py-1 border rounded" disabled={page <= 0}
-            onClick={() => { const np = Math.max(0, page - 1); setPage(np); loadPosts(np, size); }}>
-            이전
-          </button>
-          <div className="text-sm text-gray-500">{page + 1} / {Math.max(1, totalPages)}</div>
-          <button className="px-3 py-1 border rounded" disabled={page + 1 >= totalPages}
-            onClick={() => { const np = page + 1; setPage(np); loadPosts(np, size); }}>
-            다음
-          </button>
-        </div>
-      </section>
-
-      {/* 계정 비활성 */}
-      <section className="p-4 border rounded">
-        <h2 className="font-semibold text-red-600">계정 비활성(탈퇴)</h2>
-        <p className="text-sm text-gray-600 mb-2">이 작업은 되돌릴 수 없습니다.</p>
-        <button className="px-4 py-2 rounded bg-red-600 text-white" onClick={onDeactivate}>계정 비활성화</button>
-      </section>
+      </div>
     </div>
   );
 }
+
+/* ===== 스타일 ===== */
+const pageWrap = { maxWidth: 980, margin: "24px auto", padding: "0 12px" };
+const pageTitle = { textAlign: "center", fontSize: 28, fontWeight: 700, marginBottom: 14 };
+const alertBar = { borderRadius: 12, padding: "10px 12px", marginBottom: 12, textAlign: "center", fontSize: 13 };
+
+const mainGrid = { display: "grid", gridTemplateColumns: "380px 1fr", gap: 16, alignItems: "start" };
+const cardBase = { border: "1px solid var(--mui-palette-divider)", background: "var(--mui-palette-background-paper)", borderRadius: 20, boxShadow: "0 1px 0 rgba(0,0,0,0.03)" };
+const card = { ...cardBase, padding: 14 };
+const cardTall = { ...cardBase, padding: 14, minHeight: 480 };
+
+const cardHeader = { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 };
+const cardTitle = { fontWeight: 700 };
+
+const chipBtn = { height: 28, padding: "0 12px", borderRadius: 999, border: "1px solid var(--mui-palette-divider)", background: "var(--mui-palette-background-default)", color: "var(--mui-palette-text-primary)", cursor: "pointer", fontSize: 13 };
+
+const avatarBox = { width: 100, height: 100, borderRadius: "50%", border: "1px solid var(--mui-palette-divider)", background: "var(--mui-palette-background-default)", overflow: "hidden", display: "grid", placeItems: "center" };
+const avatarImg = { width: "100%", height: "100%", objectFit: "cover" };
+const avatarFallback = { fontSize: 22, color: "var(--mui-palette-text-secondary)" };
+
+const dlList = { display: "grid", gap: 8 };
+const row = { display: "grid", gridTemplateColumns: "90px 1fr", alignItems: "center" };
+const dt = { color: "var(--mui-palette-text-secondary)", fontSize: 13 };
+const dd = { border: "1px solid var(--mui-palette-divider)", background: "var(--mui-palette-background-default)", borderRadius: 8, padding: "6px 10px", minHeight: 28, display: "flex", alignItems: "center" };
+
+const listWrap = { listStyle: "none", padding: 0, margin: 0 };
+const listRow = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderTop: "1px solid var(--mui-palette-divider)" };
+const ellipsis = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 };
+const dateText = { color: "var(--mui-palette-text-secondary)", fontSize: 13 };
+const empty = { padding: 14, textAlign: "center", color: "var(--mui-palette-text-secondary)" };
