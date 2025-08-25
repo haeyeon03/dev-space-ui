@@ -8,7 +8,6 @@ const NewsCard = ({ item }) => {
   const navigate = useNavigate();
   const images = item.images || (item.imageUrl ? [item.imageUrl] : []);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const pRef = useRef();
 
   const handlePrevClick = () => {
     setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -18,14 +17,12 @@ const NewsCard = ({ item }) => {
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   }, [images.length]);
 
-  // 자동 슬라이드
   useEffect(() => {
     if (!images.length) return;
     const intervalId = setInterval(handleNextClick, 3000);
     return () => clearInterval(intervalId);
   }, [handleNextClick, images.length]);
 
-  // 상세 페이지 이동
   const goToDetail = () => {
     navigate(`/news/${item.newsPostId}`);
   };
@@ -57,7 +54,6 @@ const NewsCard = ({ item }) => {
           dangerouslySetInnerHTML={{ __html: item.title || "제목 없음" }}
         ></h2>
         <p
-          ref={pRef}
           style={{
             display: "-webkit-box",
             WebkitLineClamp: 3,
@@ -67,6 +63,13 @@ const NewsCard = ({ item }) => {
         >
           {item.content}
         </p>
+
+        <div className="news-card-info">
+          <span>작성일: {new Date(item.pubDate).toLocaleDateString()}</span>
+          <span>조회수: {item.viewCount ?? 0}</span>
+          <span>댓글: {item.commentCount ?? 0}</span>
+        </div>
+
         <div className="news-card-more" onClick={goToDetail}>
           더 보기
         </div>
@@ -85,7 +88,7 @@ const DevSpaceLayout = () => {
   const [searchType, setSearchType] = useState("전체");
   const [searchText, setSearchText] = useState("");
 
-  // 뉴스 데이터 불러오기
+  // 전체 목록 fetch
   const fetchNews = async (page = 0, reset = false) => {
     if (isLoading) return;
     setIsLoading(true);
@@ -107,25 +110,31 @@ const DevSpaceLayout = () => {
       setCurPage(data.pageNumber ?? page);
       setTotalPages(data.totalPages ?? 0);
     } catch (err) {
-      console.error("뉴스 게시글 불러오기 실패:", err);
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 초기 로드 및 검색
+  // 상세페이지에서 댓글/조회수 후 목록 최신화
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchNews(0, true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   useEffect(() => {
     fetchNews(0, true);
   }, [searchType, searchText]);
 
-  const handleSearchKeyPress = (e) => {
-    if (e.key === "Enter") fetchNews(0, true);
-  };
-
   // 무한 스크롤
   useEffect(() => {
     if (!loaderRef.current) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (
@@ -138,10 +147,13 @@ const DevSpaceLayout = () => {
       },
       { threshold: 0.7 }
     );
-
     observer.observe(loaderRef.current);
     return () => loaderRef.current && observer.unobserve(loaderRef.current);
   }, [isLoading, curPage, totalPages]);
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === "Enter") fetchNews(0, true);
+  };
 
   return (
     <div className="news-list-page">
@@ -181,9 +193,8 @@ const DevSpaceLayout = () => {
 
       <div className="news-card-list">
         {news.map((item) => (
-          <NewsCard key={item.id} item={item} />
+          <NewsCard key={item.newsPostId} item={item} />
         ))}
-
         <div ref={loaderRef} className="spinner-container">
           {isLoading && <div className="spinner"></div>}
         </div>

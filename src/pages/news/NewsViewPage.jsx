@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../../api/api-client";
 import "./NewsViewPage.css";
 
-const NewsViewPage = () => {
+const NewsViewPage = ({ refreshNewsPost }) => {
   const { id } = useParams();
   const [newsItem, setNewsItem] = useState(null);
   const [comments, setComments] = useState([]);
@@ -15,7 +15,6 @@ const NewsViewPage = () => {
   const [editingText, setEditingText] = useState("");
   const [loginUserId, setLoginUserId] = useState(null);
 
-  // 로그인 사용자 ID 가져오기 (JWT에서)
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -24,25 +23,24 @@ const NewsViewPage = () => {
         const idFromPayload = payload.userId || payload.id;
         setLoginUserId(String(idFromPayload));
       } catch (err) {
-        console.error("JWT 파싱 실패:", err);
+        console.error(err);
       }
     }
   }, []);
 
-  // 게시글 불러오기
   useEffect(() => {
     const fetchNewsItem = async () => {
       try {
         const data = await api.get(`/news-posts/${id}`);
         setNewsItem(data);
+        if (refreshNewsPost) refreshNewsPost(id);
       } catch (err) {
-        console.error("게시글 조회 실패:", err);
+        console.error(err);
       }
     };
     fetchNewsItem();
-  }, [id]);
+  }, [id, refreshNewsPost]);
 
-  // 댓글 불러오기
   const fetchComments = async (page = 0, reset = false) => {
     try {
       const data = await api.get(
@@ -53,7 +51,7 @@ const NewsViewPage = () => {
       setCurCommentPage(data.number ?? page);
       setTotalCommentPages(data.totalPages ?? 0);
     } catch (err) {
-      console.error("댓글 조회 실패:", err);
+      console.error(err);
     }
   };
 
@@ -61,19 +59,18 @@ const NewsViewPage = () => {
     if (id) fetchComments(0, true);
   }, [id]);
 
-  // 댓글 작성
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
       await api.post(`/news-posts/${id}/comments`, { content: commentText });
       setCommentText("");
       fetchComments(0, true);
+      if (refreshNewsPost) refreshNewsPost(id);
     } catch (err) {
-      console.error("댓글 등록 실패:", err);
+      console.error(err);
     }
   };
 
-  // 댓글 수정
   const handleCommentUpdate = async (commentId) => {
     if (!editingText.trim()) return;
     try {
@@ -83,18 +80,19 @@ const NewsViewPage = () => {
       setEditingCommentId(null);
       setEditingText("");
       fetchComments(curCommentPage, true);
+      if (refreshNewsPost) refreshNewsPost(id);
     } catch (err) {
-      console.error("댓글 수정 실패:", err);
+      console.error(err);
     }
   };
 
-  // 댓글 삭제
   const handleCommentDelete = async (commentId) => {
     try {
       await api.delete(`/news-posts/${id}/comments/${commentId}`);
       fetchComments(curCommentPage, true);
+      if (refreshNewsPost) refreshNewsPost(id);
     } catch (err) {
-      console.error("댓글 삭제 실패:", err);
+      console.error(err);
     }
   };
 
@@ -167,13 +165,10 @@ const NewsViewPage = () => {
             <div className="comments-list">
               {comments.map((c) => (
                 <div key={c.postCommentId} className="comment-item">
-                  {/* 1. 프로필 + 닉네임 */}
                   <div className="comment-header">
                     <div className="comment-profile"></div>
                     <span className="comment-author">{c.userNickname}</span>
                   </div>
-
-                  {/* 2. 내용 */}
                   {editingCommentId !== c.postCommentId ? (
                     <div className="comment-text">{c.content}</div>
                   ) : (
@@ -183,8 +178,6 @@ const NewsViewPage = () => {
                       onChange={(e) => setEditingText(e.target.value)}
                     />
                   )}
-
-                  {/* 3. 수정/삭제 버튼 (본인 댓글만) */}
                   {loginUserId && c.user && c.user.userId === loginUserId && (
                     <div className="comment-actions">
                       {editingCommentId === c.postCommentId ? (
@@ -221,7 +214,6 @@ const NewsViewPage = () => {
               ))}
             </div>
 
-            {/* 페이지네이션 버튼 */}
             <div className="comment-pagination">
               <button
                 disabled={curCommentPage <= 0}
@@ -246,11 +238,10 @@ const NewsViewPage = () => {
               </button>
             </div>
 
-            {/* 댓글 입력 부분: form으로 감싸기 */}
             <form
               className="comment-input-container"
               onSubmit={(e) => {
-                e.preventDefault(); // Enter 기본 동작 방지
+                e.preventDefault();
                 handleCommentSubmit();
               }}
             >

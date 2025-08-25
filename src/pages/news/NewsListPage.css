@@ -161,6 +161,13 @@
   line-height: 1.5;
 }
 
+.news-card-info {
+  display: flex;
+  gap: 12px;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
 .news-card-more {
   cursor: pointer;
   display: inline-block;
