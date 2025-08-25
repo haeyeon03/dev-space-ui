@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -7,11 +7,17 @@ import {
   MenuItem,
   Paper,
 } from "@mui/material";
-import useCustomMove from "../../hook/useCustomMove";
 import { useTheme } from "@mui/material/styles";
+import { useLocation } from "react-router-dom";
+import useCustomMove from "../../hook/useCustomMove";
 import { api } from "../../api/api-client";
 
-export default function SignUpPage({ onBack }) {
+export default function SignUpPage() {
+  const location = useLocation();
+  const oauthData = location.state?.oauthData; // key와 oauthData 포함
+  const { moveToSignin } = useCustomMove();
+  const theme = useTheme();
+
   const [form, setForm] = useState({
     userId: "",
     nickname: "",
@@ -19,37 +25,43 @@ export default function SignUpPage({ onBack }) {
     confirmPassword: "",
     gender: "",
     birthdate: "",
+    email: "",
+    provider: "",
   });
+
   const [errors, setErrors] = useState({});
-  const { moveToSignin } = useCustomMove();
-  const theme = useTheme();
+  const [isOAuth, setIsOAuth] = useState(false);
+
+  useEffect(() => {
+    if (oauthData?.email) {
+      setIsOAuth(true);
+      setForm((prev) => ({
+        ...prev,
+        email: oauthData.email,
+        nickname: oauthData.nickname || "",
+        provider: "GOOGLE",
+      }));
+    }
+  }, [oauthData]);
+
   const validate = (name, value) => {
     let error = "";
-
-    if (name === "id" && !/^[a-zA-Z0-9]{5,20}$/.test(value)) {
+    if (name === "userId" && !/^[a-zA-Z0-9]{5,20}$/.test(value))
       error = "아이디는 영문, 숫자 조합 5~20자로 입력해주세요.";
-    }
-    if (name === "nickname" && !/^[a-zA-Z가-힣]{2,10}$/.test(value)) {
+    if (name === "nickname" && !/^[a-zA-Z가-힣]{2,10}$/.test(value))
       error = "닉네임은 한글 또는 영문 2~10자로 입력해주세요.";
-    }
     if (
       name === "password" &&
       !/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,20}$/.test(
         value
       )
-    ) {
+    )
       error = "비밀번호는 영문, 숫자, 특수문자 포함 8~20자로 입력해주세요.";
-    }
-    if (name === "confirmPassword" && value !== form.password) {
+    if (name === "confirmPassword" && value !== form.password)
       error = "비밀번호가 일치하지 않습니다.";
-    }
-    if (name === "gender" && !value) {
-      error = "성별을 선택해주세요.";
-    }
-    if (name === "birth" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    if (name === "gender" && !value) error = "성별을 선택해주세요.";
+    if (name === "birthdate" && !/^\d{4}-\d{2}-\d{2}$/.test(value))
       error = "생년월일을 YYYY-MM-DD 형식으로 입력해주세요.";
-    }
-
     setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
@@ -59,45 +71,48 @@ export default function SignUpPage({ onBack }) {
     validate(name, value);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const allFieldsValid =
-      Object.values(errors).every((err) => !err) &&
-      Object.values(form).every((val) => val.trim() !== "");
-
-    if (allFieldsValid) {
-      alert("회원가입 성공!");
-    } else {
-      alert("입력값을 확인해주세요.");
-    }
-  };
-
   const handleSignUp = async () => {
-    // 유효성 검사
-    const allFieldsValid =
-      Object.values(errors).every((err) => !err) &&
-      Object.values(form).every((val) => val.trim() !== "");
-
-    if (!allFieldsValid) {
-      alert("입력값을 확인해주세요.");
-      return;
+    const requiredFields = [
+      "userId",
+      "nickname",
+      "password",
+      "confirmPassword",
+      "gender",
+      "birthdate",
+    ];
+    for (const field of requiredFields) {
+      if (!form[field] || form[field].trim() === "") {
+        alert("입력값을 확인해주세요.");
+        return;
+      }
+      if (errors[field]) {
+        alert(errors[field]);
+        return;
+      }
     }
 
     try {
-      const { userId, password, nickname, gender, birthdate } = form;
-      await api.post("/users", {
+      const { userId, password, nickname, gender, birthdate, email, provider } =
+        form;
+      const result = await api.post("/users", {
         userId,
         password,
         nickname,
         gender,
         birthdate,
+        email: isOAuth ? email : undefined, // ✅ 소셜일때만 전달
+        provider: isOAuth ? provider : undefined,
       });
 
-      alert("회원가입 성공!");
-      moveToSignin();
+      if (result.status == 400) {
+        alert("이미 존재하는 User ID 입니다. 다시 입력해주세요.");
+      } else {
+        alert("회원가입 성공!");
+        moveToSignin();
+      }
     } catch (err) {
       console.error(err);
-      alert("회원가입에 실패했습니다.");
+      alert(err.response?.data?.message || "회원가입에 실패했습니다.");
     }
   };
 
@@ -125,19 +140,20 @@ export default function SignUpPage({ onBack }) {
         <Typography variant="h5" align="center" fontWeight="bold" gutterBottom>
           회원가입
         </Typography>
+        <Box component="form" noValidate>
+          {/* ✅ 소셜 로그인일 때만 이메일 입력칸 보임 (무조건 readonly) */}
+          {isOAuth && (
+            <TextField
+              fullWidth
+              variant="standard"
+              label="이메일 *"
+              name="email"
+              value={form.email}
+              sx={{ mb: 2 }}
+              InputProps={{ readOnly: true }}
+            />
+          )}
 
-        <Box component="form" noValidate onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            variant="standard"
-            label="아이디 *"
-            name="userId"
-            value={form.userId}
-            onChange={handleChange}
-            error={!!errors.id}
-            helperText={errors.id}
-            sx={{ mb: 2 }}
-          />
           <TextField
             fullWidth
             variant="standard"
@@ -149,6 +165,19 @@ export default function SignUpPage({ onBack }) {
             helperText={errors.nickname}
             sx={{ mb: 2 }}
           />
+
+          <TextField
+            fullWidth
+            variant="standard"
+            label="아이디 *"
+            name="userId"
+            value={form.userId}
+            onChange={handleChange}
+            error={!!errors.userId}
+            helperText={errors.userId}
+            sx={{ mb: 2 }}
+          />
+
           <TextField
             fullWidth
             type="password"
@@ -161,6 +190,7 @@ export default function SignUpPage({ onBack }) {
             helperText={errors.password}
             sx={{ mb: 2 }}
           />
+
           <TextField
             fullWidth
             type="password"
@@ -173,6 +203,7 @@ export default function SignUpPage({ onBack }) {
             helperText={errors.confirmPassword}
             sx={{ mb: 2 }}
           />
+
           <TextField
             fullWidth
             select
@@ -188,6 +219,7 @@ export default function SignUpPage({ onBack }) {
             <MenuItem value="M">남성</MenuItem>
             <MenuItem value="F">여성</MenuItem>
           </TextField>
+
           <TextField
             fullWidth
             variant="standard"

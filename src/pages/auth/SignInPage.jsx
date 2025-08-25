@@ -47,33 +47,38 @@ const CustomSignInPage = () => {
   };
 
   const handleSignIn = async (provider, formData) => {
-    const username = formData.get("username")?.trim();
-    const password = formData.get("password")?.trim();
+    if (provider.id === "google") {
+      window.location.href =
+        "http://localhost:8080/oauth2/authorization/google"; // 이동할 URL 지정
+    } else {
+      const username = formData.get("username")?.trim();
+      const password = formData.get("password")?.trim();
 
-    validate("username", username);
-    validate("password", password);
+      validate("username", username);
+      validate("password", password);
 
-    if (errors.username || errors.password) {
-      alert("입력값을 확인해주세요.");
-      return;
-    }
-
-    try {
-      const data = await api.post("/auth/login", {
-        userId: username,
-        password: password,
-      });
-
-      if (data.status === 200) {
-        const { accessToken, nickname, email, role } = data.data;
-        dispatch(setUser({ token: accessToken, nickname, email, role }));
-        moveToNewsList();
-      } else {
-        alert(data.message || "로그인에 실패했습니다.");
+      if (errors.username || errors.password) {
+        alert("입력값을 확인해주세요.");
+        return;
       }
-    } catch (err) {
-      console.error(err);
-      alert("서버 오류가 발생했습니다.");
+
+      try {
+        const data = await api.post("/auth/login", {
+          userId: username,
+          password: password,
+        });
+
+        if (data.status === 200) {
+          const { accessToken, nickname, email, role } = data.data;
+          dispatch(setUser({ token: accessToken, nickname, email, role }));
+          moveToNewsList();
+        } else {
+          alert(data.message || "로그인에 실패했습니다.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("서버 오류가 발생했습니다.");
+      }
     }
   };
 

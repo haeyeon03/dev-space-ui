@@ -60,7 +60,6 @@ const FaqPage = () => {
         sx={{
           mb: 3,
           fontWeight: "bold",
-          color: "white",
           textAlign: "center",
         }}
       >

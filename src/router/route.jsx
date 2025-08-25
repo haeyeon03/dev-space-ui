@@ -47,6 +47,10 @@ const AdminUserListPage = () =>
   lazyPage(() => import("../pages/admin/AdminUserListPage"));
 const AdminUserWritePage = () =>
   lazyPage(() => import("../pages/admin/AdminUserWritePage"));
+const OAuthRedirectSuccessPage = () =>
+  lazyPage(() => import("../pages/auth/OAuthRedirectSuccessPage"));
+const OAuthRedirectFailurePage = () =>
+  lazyPage(() => import("../pages/auth/OAuthRedirectFailurePage"));
 
 const router = createBrowserRouter([
   {
@@ -95,7 +99,7 @@ const router = createBrowserRouter([
             ],
           },
 
-          // ✅ Admin (중첩 + index 리다이렉트)
+          // Admin (중첩 + index 리다이렉트)
           {
             path: "admin",
             element: (
@@ -128,6 +132,14 @@ const router = createBrowserRouter([
                 <SignUpPage />
               </ProtectedRoute>
             ),
+          },
+          {
+            path: "oauth2/callback/success",
+            element: <OAuthRedirectSuccessPage />,
+          },
+          {
+            path: "oauth2/callback/failure",
+            element: <OAuthRedirectFailurePage />,
           },
         ],
       },
