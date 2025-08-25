@@ -7,10 +7,13 @@ const useCustomMove = () => {
     navigate("/signin");
   };
 
+  const moveToSignupWithOauth = (key, oauthData) => {
+    navigate("/signup", { state: { key, oauthData } });
+  };
+
   const moveToSignup = () => {
     navigate("/signup");
   };
-
   const moveToNewsList = () => {
     navigate("/");
   };
@@ -19,6 +22,7 @@ const useCustomMove = () => {
     moveToSignin,
     moveToSignup,
     moveToNewsList,
+    moveToSignupWithOauth,
   };
 };
 export default useCustomMove;

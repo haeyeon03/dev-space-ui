@@ -1,7 +1,6 @@
 // api-client.js
 import axios from "axios";
-import { store, clearUser } from "../store/user-slice";
-
+import { store, setUser, clearUser } from "../store/user-slice";
 /**
  * 인증이 필요 없는 API URL
  */
@@ -28,7 +27,6 @@ export class APIClient {
     this.instance.interceptors.request.use((config) => {
       const url = config.url || "";
       const token = store.getState().user.token;
-
       // 인증 불필요 경로는 스킵
       if (isAuthFree(url)) return config;
 
@@ -43,7 +41,6 @@ export class APIClient {
     // ===== 응답 인터셉터 =====
     this.instance.interceptors.response.use(
       (res) => {
-        console.log("response:", res);
         return res;
       }, //정상이면 그냥 res 온거 그대로 return
       async (error) => {
@@ -61,16 +58,12 @@ export class APIClient {
         ) {
           original._retry = true;
           try {
-            const newToken = await this.enqueueRefresh();
-            if (newToken) {
-              original.headers = {
-                ...(original.headers || {}),
-                Authorization: `Bearer ${newToken}`,
-              };
-            }
+            await this.enqueueRefresh();
             return this.instance(original); // 원 요청 재시도
           } catch {
-            dispatch(clearUser());
+            this.post("/auth/logout", {});
+            store.dispatch(clearUser());
+            alert("토큰이 만료되었습니다. 로그인 후 이용해 주세요.");
             return Promise.reject(error);
           }
         }
@@ -99,16 +92,15 @@ export class APIClient {
     this.isRefreshing = true;
     try {
       const res = await this.instance.post("/auth/reissue", {}); // RT는 httpOnly 쿠키
-      const newToken = res.data?.accessToken;
-      if (!newToken) throw new Error("No accessToken in reissue response");
+      const accessToken = res.data?.data;
+      if (!accessToken) throw new Error("No accessToken in reissue response");
 
-      store.dispatch(setUser({ token: newToken }));
+      store.dispatch(setUser({ token: accessToken }));
 
       const waiters = this.queue.slice();
       this.queue.length = 0;
-      for (const resolve of waiters) resolve(newToken);
-
-      return newToken;
+      for (const resolve of waiters) resolve(accessToken);
+      return accessToken;
     } catch (e) {
       const waiters = this.queue.slice();
       this.queue.length = 0;
@@ -131,6 +123,9 @@ export class APIClient {
   }
   async delete(url, data) {
     return (await this.instance.delete(url, { data })).data;
+  }
+  async patch(url, data) {
+    return (await this.instance.patch(url, data)).data;
   }
   // 파일(ex. 이미지 등) 업로드
   async postForm(url, formData) {

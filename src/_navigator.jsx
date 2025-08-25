@@ -36,10 +36,10 @@ export const ADMIN_NAVIGATOR = [
     segment: "admin/user",
     pattern: "/admin/user",
   },
-  // {
-  //   title: "Report",
-  //   icon: <AdminPanelSettingsIcon />,
-  //   segment: "admin/report",
-  //   pattern: "/admin/report",
-  // },
+  {
+    title: "Report",
+    icon: <AdminPanelSettingsIcon />,
+    segment: "admin/report",
+    pattern: "/admin/report",
+  },
 ];

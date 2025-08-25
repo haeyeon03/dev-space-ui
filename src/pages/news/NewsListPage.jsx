@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import "./NewsListPage.css";
-import { api } from "../../api/api-client";
-
 import { useNavigate } from "react-router-dom";
+import { api } from "../../api/api-client";
+import "./NewsListPage.css";
 
+// ==================== NewsCard 컴포넌트 ====================
 const NewsCard = ({ item }) => {
   const navigate = useNavigate();
   const images = item.images || (item.imageUrl ? [item.imageUrl] : []);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const pRef = useRef();
 
   const handlePrevClick = () => {
     setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -19,12 +18,11 @@ const NewsCard = ({ item }) => {
   }, [images.length]);
 
   useEffect(() => {
-    if (images.length === 0) return;
+    if (!images.length) return;
     const intervalId = setInterval(handleNextClick, 3000);
     return () => clearInterval(intervalId);
   }, [handleNextClick, images.length]);
 
-  // 👉 더보기 버튼 클릭 시 상세 페이지로 이동
   const goToDetail = () => {
     navigate(`/news/${item.newsPostId}`);
   };
@@ -50,12 +48,12 @@ const NewsCard = ({ item }) => {
           <div className="placeholder">이미지 없음</div>
         )}
       </div>
+
       <div className="news-card-content">
         <h2
           dangerouslySetInnerHTML={{ __html: item.title || "제목 없음" }}
         ></h2>
         <p
-          ref={pRef}
           style={{
             display: "-webkit-box",
             WebkitLineClamp: 3,
@@ -65,6 +63,13 @@ const NewsCard = ({ item }) => {
         >
           {item.content}
         </p>
+
+        <div className="news-card-info">
+          <span>작성일: {new Date(item.pubDate).toLocaleDateString()}</span>
+          <span>조회수: {item.viewCount ?? 0}</span>
+          <span>댓글: {item.commentCount ?? 0}</span>
+        </div>
+
         <div className="news-card-more" onClick={goToDetail}>
           더 보기
         </div>
@@ -73,63 +78,63 @@ const NewsCard = ({ item }) => {
   );
 };
 
+// ==================== DevSpaceLayout ====================
 const DevSpaceLayout = () => {
   const [news, setNews] = useState([]);
   const [curPage, setCurPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const loaderRef = useRef(null);
-
   const [searchType, setSearchType] = useState("전체");
   const [searchText, setSearchText] = useState("");
 
+  // 전체 목록 fetch
   const fetchNews = async (page = 0, reset = false) => {
     if (isLoading) return;
     setIsLoading(true);
-
     try {
       const params = new URLSearchParams();
       params.append("curPage", page);
       params.append("pageSize", 10);
 
-      if (searchType === "제목") {
-        params.append("title", searchText);
-      } else if (searchType === "내용") {
-        params.append("content", searchText);
-      } else if (searchType === "제목 + 내용") {
+      if (searchType === "제목") params.append("title", searchText);
+      else if (searchType === "내용") params.append("content", searchText);
+      else if (searchType === "제목 + 내용") {
         params.append("title", searchText);
         params.append("content", searchText);
       }
 
       const data = await api.get(`/news-posts/?${params.toString()}`);
       const newItems = Array.isArray(data.contents) ? data.contents : [];
-
-      // 페이지 단위로 그대로 붙이기 (중복 제거 제거)
       setNews(reset ? newItems : [...news, ...newItems]);
       setCurPage(data.pageNumber ?? page);
       setTotalPages(data.totalPages ?? 0);
     } catch (err) {
-      console.error("뉴스 게시글 불러오기 실패:", err);
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 초기 로드 또는 검색
+  // 상세페이지에서 댓글/조회수 후 목록 최신화
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchNews(0, true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   useEffect(() => {
     fetchNews(0, true);
   }, [searchType, searchText]);
 
-  const handleSearchKeyPress = (e) => {
-    if (e.key === "Enter") {
-      fetchNews(0, true);
-    }
-  };
-
   // 무한 스크롤
   useEffect(() => {
     if (!loaderRef.current) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (
@@ -142,21 +147,27 @@ const DevSpaceLayout = () => {
       },
       { threshold: 0.7 }
     );
-
     observer.observe(loaderRef.current);
-    return () => {
-      if (loaderRef.current) observer.unobserve(loaderRef.current);
-    };
+    return () => loaderRef.current && observer.unobserve(loaderRef.current);
   }, [isLoading, curPage, totalPages]);
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === "Enter") fetchNews(0, true);
+  };
 
   return (
     <div className="news-list-page">
       <header className="news-list-page-header">
+        <video className="header-video" autoPlay muted loop playsInline>
+          <source
+            src="https://hyojunbang9.github.io/MediaFile/DevSpace-Header.mp4"
+            type="video/mp4"
+          />
+        </video>
         <h1>
-          개발자들의 소통공간{" "}
+          개발자들의 소통공간
           <span className="highlight">
-            <br />
-            DevSpace
+            <br /> DevSpace
           </span>
         </h1>
       </header>
@@ -182,9 +193,8 @@ const DevSpaceLayout = () => {
 
       <div className="news-card-list">
         {news.map((item) => (
-          <NewsCard key={item.id} item={item} />
+          <NewsCard key={item.newsPostId} item={item} />
         ))}
-
         <div ref={loaderRef} className="spinner-container">
           {isLoading && <div className="spinner"></div>}
         </div>
