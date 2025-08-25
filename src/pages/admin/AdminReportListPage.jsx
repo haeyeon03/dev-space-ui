@@ -25,8 +25,8 @@ const TARGET_LABEL = {
 };
 
 const STATUS_LABEL = {
-  PENDING: "처리중",
-  DONE: "처리완료",
+  PROCESSING: "처리중",
+  COMPLETED: "처리완료",
 };
 
 const AdminReportListPage = () => {
@@ -36,7 +36,7 @@ const AdminReportListPage = () => {
   // 검색/필터
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState(""); // '', 'NEWS' | 'BOARD' | 'COMMENT'
-  const [statusFilter, setStatusFilter] = useState("PENDING"); // 기본: 처리중만 보기
+  const [statusFilter, setStatusFilter] = useState("PROCESSING"); // 기본: 처리중만 보기
 
   // 정렬/페이징
   const [page, setPage] = useState(DEFAULT_PAGE);
@@ -46,7 +46,6 @@ const AdminReportListPage = () => {
   // 데이터
   const [rows, setRows] = useState([]);
   const [rowCount, setRowCount] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
 
   // 검색 디바운스용 키
@@ -54,59 +53,53 @@ const AdminReportListPage = () => {
 
   // 목록 로드
   const loadReports = async () => {
-    setLoading(true);
     setErr(null);
-    try {
-      const sortParam = sortModel?.[0]
-        ? `${sortModel[0].field},${sortModel[0].sort}`
-        : undefined;
 
-      const params = {
-        page,
-        size: pageSize,
-        q: q || undefined, // 제목/사유/신고자 검색
-        type: typeFilter || undefined, // NEWS/BOARD/COMMENT
-        status: statusFilter || undefined, // PENDING/DONE
-        sort: sortParam,
-      };
+    const sortParam = sortModel?.[0]
+      ? `${sortModel[0].field},${sortModel[0].sort}`
+      : undefined;
 
-      // GET /api/admins/reports
-      const data = await api.get("/admins/reports", params);
-      const content = Array.isArray(data?.content) ? data.content : [];
+    const params = {
+      page,
+      size: pageSize,
+      q: q || undefined, // 제목/사유/신고자 검색
+      type: typeFilter || undefined, // NEWS/BOARD/COMMENT
+      status: statusFilter || undefined, // PROCESSING/COMPLETED
+      sort: sortParam,
+    };
 
-      // 예시 응답 row:
-      // {
-      //   reportId: 101,
-      //   targetType: 'NEWS'|'BOARD'|'COMMENT',
-      //   targetId: 123,
-      //   title: '신고된 글 제목',
-      //   reason: '욕설/스팸',
-      //   reporterId: 'user001',
-      //   status: 'PENDING'|'DONE',
-      //   createdAt: '2025-08-20T05:12:34'
-      // }
+    // GET /api/admins/reports
+    const data = await api.get("/admins/reports", params);
+    const content = Array.isArray(data?.content) ? data.content : [];
 
-      setRows(
-        content.map((r, idx) => ({
-          id: r.reportId ?? `row-${idx}`,
-          reportId: r.reportId,
-          targetType: r.targetType ?? "",
-          targetId: r.targetId ?? null,
-          title: r.title ?? "(제목 없음)",
-          reason: r.reason ?? "",
-          reporterId: r.reporterId ?? "",
-          status: r.status ?? "PENDING",
-          createdAt: r.createdAt ?? null,
-        }))
-      );
-      setRowCount(
-        Number.isFinite(data?.totalElements) ? data.totalElements : 0
-      );
-    } catch (e) {
-      setErr(e?.message || String(e));
-    } finally {
-      setLoading(false);
-    }
+    // 예시 응답 row:
+    // {
+    //   reportId: 101,
+    //   targetType: 'NEWS'|'BOARD'|'COMMENT',
+    //   targetId: 123,
+    //   title: '신고된 글 제목',
+    //   reason: '욕설/스팸',
+    //   reporterId: 'user001',
+    //   status: 'PROCESSING'|'COMPLETED',
+    //   createdAt: '2025-08-20T05:12:34'
+    // }
+
+    setRows(
+      content.filter(Boolean).map((r, idx) => ({
+        id: r.reportId ?? `row-${idx}`,
+        reportId: r.reportId ?? null,
+        targetType: r.targetType ?? null, // NEWS | BOARD | COMMENT
+        targetId: r.targetId ?? null,
+        title: r.contentTitle ?? "",
+        reason: r.reason ?? "",
+        reporterId: r.reporterUserId ?? "", // reporterUserId -> reporterId
+        status: r.status ?? "PROCESSING", // PROCESSING | COMPLETED
+        createdAt: r.reportedAt ?? null,
+        contentPath: r.contentPath ?? null, // "/board/3" 등
+      }))
+    );
+
+    setRowCount(Number.isFinite(data?.totalElements) ? data.totalElements : 0);
   };
 
   // 이펙트: 의존성 변경 시 로드
@@ -126,125 +119,128 @@ const AdminReportListPage = () => {
   // 상태 변경(PATCH)
   const updateStatus = async (reportId, nextStatus) => {
     try {
-      // PATCH /api/admins/reports/{id}/status  { status: 'DONE' | 'PENDING' }
-      await api.patch(`/admins/reports/${reportId}/status`, {
+      // PATCH /api/admins/{id}/status  { status: 'PROCESSING' | 'COMPLETED' }
+      await api.patch(`/admins/${reportId}/status`, {
         status: nextStatus,
       });
-      // 반영 후 새로고침
       await loadReports();
     } catch (e) {
-      alert("상태 변경 중 오류가 발생했습니다.");
-      // eslint-disable-next-line no-console
       console.error(e);
+      alert("상태 변경 중 오류가 발생했습니다.");
     }
   };
 
   // 신고 대상 열기 (타입별 라우팅 또는 새 창)
   const openTarget = (row) => {
-    const { targetType, targetId } = row;
-    if (!targetType || !targetId) return;
-
-    // 내부 관리자 라우트 or 사용자-facing 라우트 결정
-    if (targetType === "NEWS") {
-      // 예: 관리자 뉴스 상세로 이동
-      navigate(`/admin/news/${targetId}`);
-    } else if (targetType === "BOARD") {
-      navigate(`/admin/board/${targetId}`);
-    } else if (targetType === "COMMENT") {
-      navigate(`/admin/comments/${targetId}`);
-    }
+    // 서버가 contentPath("/board/3", "/news/10" 등)를 내려주므로 그걸 그대로 사용
+    const path = row?.contentPath;
+    if (!path) return;
+    // 관리자 라우트로 갈지, 사용자 뷰로 갈지 정책에 맞게 변경
+    // 관리자 쪽 라우트로 감싸려면: navigate(`/admin${path}`)
+    navigate(path);
   };
 
-  const columns = useMemo(
-    () => [
-      {
-        field: "targetType",
-        headerName: "종류",
-        width: 100,
-        sortable: true,
-        valueFormatter: ({ value }) => TARGET_LABEL[value] || value || "-",
+  const columns = [
+    {
+      field: "targetType",
+      headerName: "종류",
+      width: 100,
+      sortable: true,
+      renderCell: (p = {}) => {
+        const v = p?.row?.targetType;
+        return TARGET_LABEL[v] ?? "-";
       },
-      {
-        field: "title",
-        headerName: "제목",
-        flex: 1,
-        minWidth: 200,
-        sortable: true,
+    },
+    {
+      field: "title",
+      headerName: "제목",
+      flex: 1,
+      minWidth: 220,
+      sortable: true,
+      renderCell: (p = {}) => String(p?.row?.title ?? ""),
+    },
+    {
+      field: "reason",
+      headerName: "사유",
+      flex: 1,
+      minWidth: 200,
+      sortable: false,
+      renderCell: (p = {}) => String(p?.row?.reason ?? ""),
+    },
+    {
+      field: "reporterId",
+      headerName: "신고자",
+      width: 180,
+      sortable: true,
+      renderCell: (p = {}) => String(p?.row?.reporterId ?? ""),
+    },
+    {
+      field: "createdAt",
+      headerName: "신고일시",
+      width: 200,
+      sortable: true,
+      renderCell: (p = {}) => {
+        const v = p?.row?.createdAt;
+        return v ? new Date(v).toLocaleString() : "-";
       },
-      {
-        field: "reason",
-        headerName: "사유",
-        flex: 1,
-        minWidth: 180,
-        sortable: false,
+    },
+    {
+      field: "status",
+      headerName: "상태",
+      width: 120,
+      sortable: true,
+      renderCell: (p = {}) => {
+        const s = String(p?.row?.status || "PROCESSING").toUpperCase();
+        const label = STATUS_LABEL[s] ?? s;
+        const variant =
+          s === "COMPLETED" || s === "DONE" ? "success" : "warning";
+        return <span className={`badge bg-${variant}`}>{label}</span>;
       },
-      {
-        field: "reporterId",
-        headerName: "신고자",
-        width: 140,
-        sortable: true,
-      },
-      {
-        field: "status",
-        headerName: "상태",
-        width: 120,
-        sortable: true,
-        renderCell: (params) => {
-          const s = (params.row.status || "PENDING").toUpperCase();
-          const label = STATUS_LABEL[s] || s;
-          const variant = s === "DONE" ? "success" : "warning";
-          return <Badge bg={variant}>{label}</Badge>;
-        },
-      },
-      {
-        field: "createdAt",
-        headerName: "신고일시",
-        width: 180,
-        sortable: true,
-        valueFormatter: ({ value }) =>
-          value ? new Date(value).toLocaleString() : "-",
-      },
-      {
-        field: "actions",
-        headerName: "작업",
-        width: 220,
-        sortable: false,
-        renderCell: (params) => {
-          const s = (params.row.status || "PENDING").toUpperCase();
-          const isPending = s === "PENDING";
-          return (
-            <div className="d-flex gap-2">
-              <Button
-                size="sm"
-                variant="outline-primary"
-                onClick={() => openTarget(params.row)}
+    },
+    {
+      field: "actions",
+      headerName: "작업",
+      width: 240,
+      sortable: false,
+      renderCell: (p = {}) => {
+        const row = p?.row ?? {};
+        const id = row.reportId;
+        const isProcessing =
+          String(row.status || "PROCESSING").toUpperCase() === "PROCESSING";
+        return (
+          <div className="d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary"
+              onClick={() => openTarget(row)}
+              disabled={!row.contentPath}
+            >
+              이동
+            </button>
+            {isProcessing ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-success"
+                onClick={() => id && updateStatus(id, "COMPLETED")}
+                disabled={!id}
               >
-                이동
-              </Button>
-              {isPending ? (
-                <Button
-                  size="sm"
-                  variant="success"
-                  onClick={() => updateStatus(params.row.reportId, "DONE")}
-                >
-                  처리완료
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline-secondary"
-                  onClick={() => updateStatus(params.row.reportId, "PENDING")}
-                >
-                  처리중으로
-                </Button>
-              )}
-            </div>
-          );
-        },
+                처리완료
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => id && updateStatus(id, "PROCESSING")}
+                disabled={!id}
+              >
+                처리중으로
+              </button>
+            )}
+          </div>
+        );
       },
-    ],
-    []
-  );
+    },
+  ];
 
   return (
     <div className="container-fluid py-3">
@@ -257,11 +253,6 @@ const AdminReportListPage = () => {
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            {loading ? (
-              <InputGroup.Text>
-                <Spinner size="sm" />
-              </InputGroup.Text>
-            ) : null}
           </InputGroup>
         </Col>
 
@@ -295,8 +286,8 @@ const AdminReportListPage = () => {
               }}
               size="sm"
             >
-              <option value="PENDING">처리중</option>
-              <option value="DONE">처리완료</option>
+              <option value="PROCESSING">처리중</option>
+              <option value="COMPLETED">처리완료</option>
               <option value="">전체</option>
             </Form.Select>
           </Form.Group>
@@ -309,7 +300,7 @@ const AdminReportListPage = () => {
             onClick={() => {
               setQ("");
               setTypeFilter("");
-              setStatusFilter("PENDING");
+              setStatusFilter("PROCESSING");
               setSortModel([]);
               setPage(0);
             }}
@@ -325,7 +316,7 @@ const AdminReportListPage = () => {
         </Alert>
       )}
 
-      <div style={{ width: "100%" }}>
+      <div style={{ width: "110%" }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -342,7 +333,6 @@ const AdminReportListPage = () => {
             setPageSize(model.pageSize ?? DEFAULT_SIZE);
           }}
           onSortModelChange={(model) => setSortModel(model)}
-          loading={loading}
           density="compact"
           sx={{
             "& .MuiDataGrid-cell": { fontVariantNumeric: "tabular-nums" },
