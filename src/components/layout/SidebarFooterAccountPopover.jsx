@@ -6,6 +6,7 @@ import MenuList from "@mui/material/MenuList";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemText from "@mui/material/ListItemText";
 import { AccountPopoverFooter, SignOutButton } from "@toolpad/core/Account";
+import { Link as RouterLink } from "react-router-dom";
 
 export default function SidebarFooterAccountPopover() {
   return (
@@ -13,7 +14,8 @@ export default function SidebarFooterAccountPopover() {
       {/* <Typography variant="body2" mx={2} mt={1}>Menu Title</Typography> */}
       <MenuList>
         <MenuItem
-          component="button"
+          component={RouterLink}
+          to="/mypage"
           sx={{ justifyContent: "flex-start", width: "100%", columnGap: 2 }}
         >
           <ListItemText
@@ -24,7 +26,7 @@ export default function SidebarFooterAccountPopover() {
               width: "100%",
             }}
             primary="My Page"
-            // secondary="Sub Title"
+          // secondary="Sub Title"
           />
         </MenuItem>
       </MenuList>

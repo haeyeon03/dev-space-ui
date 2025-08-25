@@ -49,7 +49,7 @@ export default function BoardWritePage() {
                 <button key={c.code} type="button" onClick={() => setCategory(c.code)}
                   style={{
                     padding: "8px 14px", borderRadius: 16,
-                    border: active ? "1px solid #111" : "1px solid #ccc",
+                    border: active ? "1px solid #ccc" : "1px solid #111",
                     background: active ? "#111" : "#fff", color: active ? "#fff" : "#111",
                     cursor: "pointer",
                   }}>
@@ -76,8 +76,8 @@ export default function BoardWritePage() {
   );
 }
 
-const wrap = { maxWidth: 960, margin: "24px auto", padding: 16, border: "1px solid #c9c9c9", borderRadius: 6, background: "#fff" };
-const label = { display: "block", marginBottom: 8, color: "#333", fontWeight: 600 };
+const wrap = { maxWidth: 960, margin: "24px auto", padding: 16, border: "1px solid #c9c9c9", borderRadius: 6, background: "var(--mui-palette-background-paper)" };
+const label = { display: "block", marginBottom: 8, color: "var(--mui-palette-text-primary)", fontWeight: 600 };
 const input = { width: "100%", height: 36, border: "1px solid #bbb", borderRadius: 4, padding: "0 10px" };
 const primaryBtn = { height: 36, padding: "0 18px", borderRadius: 6, border: "1px solid #2d5ae7", background: "#2d5ae7", color: "#fff", cursor: "pointer" };
 const ghostBtn = { height: 36, padding: "0 18px", borderRadius: 6, border: "1px solid #bbb", background: "#f7f7f7", color: "#333", cursor: "pointer" };
