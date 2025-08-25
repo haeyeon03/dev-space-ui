@@ -6,6 +6,7 @@ import Layout from "../layouts/dashboard";
 import LoadingPage from "../pages/common/LoadingPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import ProtectedAdminRoute from "../components/common/ProtectedAdminRoute";
+import AuthGuard from "../components/common/AuthGuard";
 import RootRedirect from "../components/common/RootDirect"; // 역할: "/"에서만 role별 리다이렉트
 
 // Lazy helper
@@ -46,10 +47,18 @@ const AdminUserListPage = () =>
   lazyPage(() => import("../pages/admin/AdminUserListPage"));
 const AdminUserWritePage = () =>
   lazyPage(() => import("../pages/admin/AdminUserWritePage"));
+const OAuthRedirectSuccessPage = () =>
+  lazyPage(() => import("../pages/auth/OAuthRedirectSuccessPage"));
+const OAuthRedirectFailurePage = () =>
+  lazyPage(() => import("../pages/auth/OAuthRedirectFailurePage"));
 
 const router = createBrowserRouter([
   {
-    element: <App />,
+    element: (
+      <AuthGuard>
+        <App />
+      </AuthGuard>
+    ),
     children: [
       {
         path: "/",
@@ -90,7 +99,7 @@ const router = createBrowserRouter([
             ],
           },
 
-          // ✅ Admin (중첩 + index 리다이렉트)
+          // Admin (중첩 + index 리다이렉트)
           {
             path: "admin",
             element: (
@@ -123,6 +132,14 @@ const router = createBrowserRouter([
                 <SignUpPage />
               </ProtectedRoute>
             ),
+          },
+          {
+            path: "oauth2/callback/success",
+            element: <OAuthRedirectSuccessPage />,
+          },
+          {
+            path: "oauth2/callback/failure",
+            element: <OAuthRedirectFailurePage />,
           },
         ],
       },
