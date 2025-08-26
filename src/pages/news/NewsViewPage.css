@@ -53,12 +53,16 @@
   justify-content: center;
   transition: 0.2s ease;
   z-index: 2;
+  opacity: 0.4;
 }
 .prev-btn {
   left: 12px;
 }
 .next-btn {
   right: 12px;
+}
+.carousel-btn:hover {
+  opacity: 1;
 }
 
 .description-area {
