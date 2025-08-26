@@ -6,7 +6,7 @@ import "./NewsListPage.css";
 // ==================== NewsCard 컴포넌트 ====================
 const NewsCard = ({ item }) => {
   const navigate = useNavigate();
-  const images = item.images || (item.imageUrl ? [item.imageUrl] : []);
+  const images = item.imageUrls || (item.url ? [item.url] : []);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handlePrevClick = () => {
