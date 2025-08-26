@@ -58,6 +58,30 @@ async function _fetchJSONCore(url, options = {}) {
   }
   return data ?? {};
 }
+
+/* 👉 파일 업로드 전용: JSON이 아니어도 2xx면 성공 처리 */
+async function postFormAuth(path, formData) {
+  const first = sessionStorage.getItem("API_BASE_CACHED") || CANDIDATE_API_BASES[0];
+  const bases = [first, CANDIDATE_API_BASES[1]];
+  let lastErr;
+  for (const base of bases) {
+    const url = `${base}${path}`;
+    try {
+      const res = await fetch(url, { method: "POST", headers: authHeaders(), body: formData });
+      const ct = res.headers.get("content-type") || "";
+      let data = null;
+      if (ct.includes("application/json")) data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = (data && (data.message || data.error)) || res.statusText;
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      return data || {}; // JSON 없어도 OK
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("Upload failed");
+}
 /* ====== /유틸 ====== */
 
 const MYPAGE = "/mypage";
@@ -142,10 +166,12 @@ export default function MyInfoEditPage() {
   // 미리보기 메모리 해제
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
+  // 상대경로인 경우 8080 기준으로 절대경로 보정
   const profileImageSrc = useMemo(() => {
     const u = profile.profileImageUrl || "";
     if (!u) return "";
-    return u.startsWith("http") ? u : u;
+    if (/^https?:\/\//i.test(u)) return u;
+    return `${location.protocol}//${location.hostname}:8080${u.startsWith("/") ? "" : "/"}${u}`;
   }, [profile.profileImageUrl]);
 
   const onSelectFile = (e) => {
@@ -160,12 +186,10 @@ export default function MyInfoEditPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const data = await fetchJSON(`${MYPAGE}/profile-image`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: fd,
-      });
-      setProfile((p) => ({ ...p, ...data }));
+      const data = await postFormAuth(`${MYPAGE}/profile-image`, fd);
+      const newUrl =
+        data?.profileImageUrl || data?.url || data?.location || data?.path || profile.profileImageUrl;
+      setProfile((p) => ({ ...p, profileImageUrl: newUrl }));
       setMsg("프로필 이미지가 업데이트되었습니다.");
       setPreview("");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -233,7 +257,6 @@ export default function MyInfoEditPage() {
     e.preventDefault();
     setMsg(""); setErr("");
 
-    // 닉네임 규칙 우선 검증
     if (!nickValid) {
       setNickInlineErr(NICK_RULE_MSG);
       return;
@@ -289,7 +312,6 @@ export default function MyInfoEditPage() {
       setPwdInlineMsg("비밀번호가 변경되었습니다.");
       setPwd({ currentPassword: "", newPassword: "" });
     } catch (e) {
-      // 서버 메시지를 그대로 노출(예: 현재 비밀번호가 틀렸습니다)
       setPwdInlineErr(e?.message || "현재 비밀번호가 올바르지 않습니다.");
     } finally {
       setPwdSaving(false);
