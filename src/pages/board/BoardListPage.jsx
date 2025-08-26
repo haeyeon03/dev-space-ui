@@ -1,5 +1,6 @@
+// src/pages/board/BoardListPage.jsx
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../../api/api-client";
 
 // 카테고리 라벨 표시
@@ -44,6 +45,9 @@ const fmtDate = (iso) => {
 };
 
 export default function BoardListPage() {
+  const [searchParams] = useSearchParams();
+  const mineOnly = searchParams.get("mine") === "me"; // ← /board?mine=me 이면 내 글만
+
   const [list, setList] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -67,13 +71,19 @@ export default function BoardListPage() {
         category: category ? toApi(category) : undefined,
       };
 
-      const data = keyword.trim()
-        ? await api.get("/board-posts/search", {
-          ...base,
-          searchType,
-          keyword: keyword.trim(),
-        })
-        : await api.get("/board-posts", base);
+      let data;
+      if (mineOnly) {
+        data = await api.get("/mypage/postlist", base);
+      } else {
+        // 기존 전체/검색 로직
+        data = keyword.trim()
+          ? await api.get("/board-posts/search", {
+            ...base,
+            searchType,
+            keyword: keyword.trim(),
+          })
+          : await api.get("/board-posts", base);
+      }
 
       setList(data?.content ?? []);
       setPage(data?.number ?? 0);
@@ -88,10 +98,15 @@ export default function BoardListPage() {
 
   useEffect(() => {
     load(0);
-  }, [order, category]);
+    // mineOnly 바뀌어도 새로 로드
+  }, [order, category, mineOnly]);
 
   const onSubmitSearch = (e) => {
     e?.preventDefault();
+    if (mineOnly) {
+      load(0);
+      return;
+    }
     load(0);
   };
 
@@ -106,6 +121,12 @@ export default function BoardListPage() {
 
   return (
     <div style={{ maxWidth: 960, margin: "24px auto", padding: "0 12px" }}>
+      {/* 헤더: 모드 배지 */}
+      {mineOnly && (
+        <div style={{ marginBottom: 8, fontSize: 13, color: "var(--mui-palette-text-secondary)" }}>
+          내 글만 보기
+        </div>
+      )}
 
       {/* 카테고리 탭 + 정렬 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 8, alignItems: "center", marginBottom: 10 }}>
@@ -140,21 +161,24 @@ export default function BoardListPage() {
       <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <form onSubmit={onSubmitSearch}
           style={{ display: "grid", gridTemplateColumns: "140px 1fr 100px", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
-          <select value={searchType} onChange={(e) => setSearchType(e.target.value)}
-            style={{ height: 36, borderRadius: 6, border: "1px solid #bbb", padding: "0 8px" }}>
+          <select value={searchType} onChange={(e) => setSearchType(e.target.value)} disabled={mineOnly}
+            style={{ height: 36, borderRadius: 6, border: "1px solid #bbb", padding: "0 8px", opacity: mineOnly ? 0.6 : 1 }}>
             {SEARCH_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="검색어를 입력하세요"
-            style={{ height: 36, borderRadius: 6, border: "1px solid #bbb", padding: "0 10px" }} />
+          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={mineOnly ? "내 글 보기에서는 검색이 제한될 수 있어요" : "검색어를 입력하세요"}
+            disabled={mineOnly}
+            style={{ height: 36, borderRadius: 6, border: "1px solid #bbb", padding: "0 10px", opacity: mineOnly ? 0.6 : 1 }} />
           <button
             type="submit"
+            disabled={mineOnly}
             style={{
               height: 36,
               borderRadius: 6,
               border: "1px solid var(--mui-palette-divider)",
               background: "var(--mui-palette-grey-500)",
               color: "var(--mui-palette-text-primary-contrastText)",
-              cursor: "pointer",
+              cursor: mineOnly ? "default" : "pointer",
+              opacity: mineOnly ? 0.6 : 1,
             }}
           >
             검색
@@ -200,7 +224,7 @@ export default function BoardListPage() {
         >
           <div style={{ textAlign: "center" }}>카테고리</div>
           <div style={{ textAlign: "center" }}>제목</div>
-          <div style={{ textAlign: "center" }}>닉네임</div>
+          <div style={{ textAlign: "center" }}>{mineOnly ? "내 닉네임" : "닉네임"}</div>
           <div style={{ textAlign: "center" }}>작성일자</div>
           <div style={{ textAlign: "center" }}>조회</div>
           <div style={{ textAlign: "center" }}>댓글</div>
