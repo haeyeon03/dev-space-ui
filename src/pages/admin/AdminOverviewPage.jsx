@@ -43,6 +43,11 @@ import {
   FormControlLabel,
   Radio,
   Grid,
+  Paper,
+  Box,
+  Typography,
+  useTheme,
+  Divider,
 } from "@mui/material";
 
 const fmt = (d) => d.toISOString().slice(0, 10);
@@ -70,10 +75,28 @@ const AdminOverviewPage = () => {
   const [gender, setGender] = useState(null); // {male, female}
   const [daily, setDaily] = useState([]); // [{date, viewCount}]
   const [ageGender, setAgeGender] = useState([]); // [{ageGroup, gender, viewCount}]
+
   // daily view, age gender 묶음
   const [chartTab, setChartTab] = React.useState("daily");
-
   const [err, setErr] = useState(null);
+
+  // mui 레이아웃
+  const theme = useTheme();
+  const cardSx = {
+    p: 2.5,
+    borderRadius: 2,
+    elevation: 0,
+    bgcolor: "background.paper",
+    boxShadow:
+      theme.palette.mode === "light"
+        ? "0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.10)"
+        : "0 1px 2px rgba(0,0,0,0.4)",
+    border: `1px solid ${
+      theme.palette.mode === "light"
+        ? theme.palette.grey[200]
+        : theme.palette.grey[800]
+    }`,
+  };
 
   // 공통 로더
   const loadInitial = async () => {
@@ -122,10 +145,10 @@ const AdminOverviewPage = () => {
 
   // KPI 카드
   const kpi = [
-    { title: "Total Users", value: summary?.totalUsers ?? "-" },
-    { title: "Total News Posts", value: summary?.totalNewsPosts ?? "-" },
-    { title: "Total Board Posts", value: summary?.totalBoardPosts ?? "-" },
-    { title: "Total Comments", value: summary?.totalComments ?? "-" },
+    { title: "이용자 현황", value: summary?.totalUsers ?? "-" },
+    { title: "뉴스 게시글 현황", value: summary?.totalNewsPosts ?? "-" },
+    { title: "게시판 게시글 현황", value: summary?.totalBoardPosts ?? "-" },
+    { title: "사이트 댓글 현황", value: summary?.totalComments ?? "-" },
   ];
 
   // 성별 비율 (Doughnut)
@@ -213,124 +236,204 @@ const AdminOverviewPage = () => {
   };
 
   return (
-    <Container fluid className="py-3">
+    <Container fluid className="py-4">
       {/* 상단 필터 */}
       <Row className="align-items-end g-3 mb-3">
         <Col xs="auto">
-          <h3 className="mb-0">관리자 대시보드</h3>
+          <h3 className="mb-0">DEV-SPACE information for admin</h3>
         </Col>
       </Row>
 
-      {/* KPI */}
-      <Grid container spacing={25} alignItems="stretch" sx={{ mb: 5 }}>
-        <Grid item xs={12} md={7}>
-          {kpi.map((k) => (
-            <Col key={k.title} md={6}>
-              <Card className="shadow-sm h-100">
-                <Card.Body>
-                  <div className="text-muted small">{k.title}</div>
-                  <div className="fw-semibold fs-4 mt-1">{k.value}</div>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
+      <Box
+        sx={{
+          p: {
+            xs: 2,
+            md: 3,
+            border: `1px solid ${
+              theme.palette.mode === "light"
+                ? theme.palette.grey[200]
+                : theme.palette.grey[800]
+            }`,
+          },
+        }}
+      >
+        <Grid container spacing={3}>
+          {/* 상단: KPI (좌) */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={cardSx}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                KPI
+              </Typography>
+              {/* 👉 여기에 KPI 카드 4개 그리드 or 리스트로 배치 */}
+              <Grid container spacing={2}>
+                {[
+                  { label: "이용자 현황", value: summary?.totalUsers ?? "-" },
+                  {
+                    label: "뉴스 게시글 현황",
+                    value: summary?.totalNewsPosts ?? "-",
+                  },
+                  {
+                    label: "자유게시판 게시글 현황",
+                    value: summary?.totalBoardPosts ?? "-",
+                  },
+                  {
+                    label: "전체 댓글 수 현황",
+                    value: summary?.totalComments ?? "-",
+                  },
+                ].map((k, i) => (
+                  <Grid key={i} item xs={6}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 1.5,
+                        bgcolor:
+                          theme.palette.mode === "light"
+                            ? "grey.50"
+                            : "grey.900",
+                        border: `1px solid ${
+                          theme.palette.mode === "light"
+                            ? theme.palette.grey[200]
+                            : theme.palette.grey[800]
+                        }`,
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {k.label}
+                      </Typography>
+                      <Typography variant="h5" sx={{ mt: 0.5 }}>
+                        {k.value}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Paper>
+          </Grid>
+
+          {/* 상단: 성별 비율 (우) */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={cardSx}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                성별 비율
+              </Typography>
+              {/* 👉 여기에 파이/도넛 차트 컴포넌트 삽입 */}
+              <Doughnut data={genderData} />
+            </Paper>
+          </Grid>
         </Grid>
 
-        {/* 성별 비율 */}
-
-        <Grid item xs={12} md={10}>
+        <Col lg={8}>
           <Card className="shadow-sm h-100">
             <Card.Body>
-              <Card.Title>성별 비율</Card.Title>
-              <div style={{ height: 280 }}>
-                <Doughnut data={genderData} />
-              </div>
+              <Card.Title>날짜 설정</Card.Title>
             </Card.Body>
           </Card>
+        </Col>
+
+        {/* 하단: 차트 전환 (라디오 버튼 + 단일 카드)
+        
+          <Col xs="auto" className="ms-auto">
+            <Form className="d-flex align-items-center gap-2">
+              <Form.Group controlId="startDate">
+                <Form.Label className="small mb-1">시작일</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  size="sm"
+                />
+              </Form.Group>
+              <Form.Group controlId="endDate">
+                <Form.Label className="small mb-1">종료일</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  size="sm"
+                />
+              </Form.Group>
+            </Form>
+          </Col>
+          {/* 오른쪽 정렬된 라디오 버튼 */}
+          <Col xs={12} className="d-flex justify-content-end">
+            <FormControl>
+              <FormLabel id="chart-tab-label" className="small">
+                차트 선택
+              </FormLabel>
+              <RadioGroup
+                row
+                aria-labelledby="chart-tab-label"
+                name="chart-tab"
+                value={chartTab}
+                onChange={(e) => setChartTab(e.target.value)}
+              >
+                <FormControlLabel
+                  value="daily"
+                  control={<Radio size="small" />}
+                  label="일별 조회수"
+                />
+                <FormControlLabel
+                  value="ageGender"
+                  control={<Radio size="small" />}
+                  label="연령·성별별 분포"
+                />
+              </RadioGroup>
+            </FormControl>
+          </Col>
+
+          
+            {chartTab === "daily" ? (
+              {/* 하단: 일별 조회수 */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={cardSx}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>일별 조회수</Typography>
+              <Divider sx={{ ml: 2, flexGrow: 1 }} />
+            </Box>
+           <Line data={dailyData} options={lineOptions} />
+
+            <Box
+              sx={{
+                height: 300,
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'light' ? 'grey.50' : 'grey.900',
+                border: `1px solid ${
+                  theme.palette.mode === 'light'
+                    ? theme.palette.grey[200]
+                    : theme.palette.grey[800]
+                }`,
+              }}
+            />
+          </Paper>
         </Grid>
-      </Grid>
+            ) : (
+              {/* 하단: 연령·성별 분포 */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={cardSx}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>연령·성별 분포</Typography>
+              <Divider sx={{ ml: 2, flexGrow: 1 }} />
+            </Box>
+            <Bar data={ageGenderData} options={barOptions} />
 
-      <Col lg={8}>
-        <Card className="shadow-sm h-100">
-          <Card.Body>
-            <Card.Title>날짜 설정</Card.Title>
-          </Card.Body>
-        </Card>
-      </Col>
-
-      {/* 하단: 차트 전환 (라디오 버튼 + 단일 카드) */}
-      <Row className="g-3">
-        <Col xs="auto" className="ms-auto">
-          <Form className="d-flex align-items-center gap-2">
-            <Form.Group controlId="startDate">
-              <Form.Label className="small mb-1">시작일</Form.Label>
-              <Form.Control
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                size="sm"
-              />
-            </Form.Group>
-            <Form.Group controlId="endDate">
-              <Form.Label className="small mb-1">종료일</Form.Label>
-              <Form.Control
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                size="sm"
-              />
-            </Form.Group>
-          </Form>
-        </Col>
-        {/* 오른쪽 정렬된 라디오 버튼 */}
-        <Col xs={12} className="d-flex justify-content-end">
-          <FormControl>
-            <FormLabel id="chart-tab-label" className="small">
-              차트 선택
-            </FormLabel>
-            <RadioGroup
-              row
-              aria-labelledby="chart-tab-label"
-              name="chart-tab"
-              value={chartTab}
-              onChange={(e) => setChartTab(e.target.value)}
-            >
-              <FormControlLabel
-                value="daily"
-                control={<Radio size="small" />}
-                label="일별 조회수"
-              />
-              <FormControlLabel
-                value="ageGender"
-                control={<Radio size="small" />}
-                label="연령·성별별 분포"
-              />
-            </RadioGroup>
-          </FormControl>
-        </Col>
-
-        <Col xs={12}>
-          {chartTab === "daily" ? (
-            <Card className="shadow-sm h-100">
-              <Card.Body>
-                <Card.Title>일별 조회수</Card.Title>
-                <div style={{ height: 340 }}>
-                  <Line data={dailyData} options={lineOptions} />
-                </div>
-              </Card.Body>
-            </Card>
-          ) : (
-            <Card className="shadow-sm h-100">
-              <Card.Body>
-                <Card.Title>연령·성별별 분포</Card.Title>
-                <div style={{ height: 340 }}>
-                  <Bar data={ageGenderData} options={barOptions} />
-                </div>
-              </Card.Body>
-            </Card>
-          )}
-        </Col>
-      </Row>
+            <Box
+              sx={{
+                height: 300,
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'light' ? 'grey.50' : 'grey.900',
+                border: `1px solid ${
+                  theme.palette.mode === 'light'
+                    ? theme.palette.grey[200]
+                    : theme.palette.grey[800]
+                }`,
+              }}
+            />
+          </Paper>
+        </Grid>
+            )} */}
+          
+        
+      </Box>
     </Container>
   );
 };
