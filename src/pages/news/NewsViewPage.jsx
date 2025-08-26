@@ -98,9 +98,15 @@ const NewsViewPage = ({ refreshNewsPost }) => {
 
   // 이미지 캐러셀
   const images =
-    newsItem?.images || (newsItem?.imageUrl ? [newsItem.imageUrl] : []);
+    newsItem?.imageUrls && newsItem.imageUrls.length > 0
+      ? newsItem.imageUrls
+      : newsItem?.url
+        ? [newsItem.url]
+        : [];
+
   const handlePrevClick = () =>
     setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+
   const handleNextClick = useCallback(
     () =>
       setCurrentImageIndex((prev) =>
@@ -108,6 +114,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
       ),
     [images.length]
   );
+
   useEffect(() => {
     if (images.length === 0) return;
     const intervalId = setInterval(handleNextClick, 3000);
