@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Row,
   Col,
@@ -10,15 +10,16 @@ import {
   Spinner,
 } from "react-bootstrap";
 import { DataGrid } from "@mui/x-data-grid";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../api/api-client";
 
 // 서버 페이징 기본값
 const DEFAULT_PAGE = 0; // Spring Page index (0-based)
-const DEFAULT_SIZE = 10;
+const DEFAULT_SIZE = 25;
 
 const AdminUserListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 검색/필터 상태
   const [query, setQuery] = useState("");
@@ -47,7 +48,7 @@ const AdminUserListPage = () => {
     const params = {
       page,
       size: pageSize,
-      q: query || undefined, // 닉네임/이름 통합 검색
+      keyword: query || undefined, // 닉네임/이름 통합 검색
       role: roleFilter || undefined, // 'admin' | 'user'
       suspended: suspendedFilter || undefined, // 'true' | 'false'
       sort: sortParam,
@@ -102,8 +103,8 @@ const AdminUserListPage = () => {
   useEffect(() => {
     const t = setTimeout(() => {
       setPage(0); // 검색어 바뀌면 1페이지부터
-      setTypingKey((k) => k + 1);
-    }, 350);
+      loadUsers();
+    }, 300);
     return () => clearTimeout(t);
   }, [query]);
 
@@ -192,56 +193,62 @@ const AdminUserListPage = () => {
   );
 
   return (
-    <div className="container-fluid py-3">
-      <Row className="g-2 align-items-end mb-2">
-        <Col xs={12} md={4}>
+    <>
+      <div
+        style={{
+          display: "flex",
+          gridTemplateColumns: "1fr 120px",
+          gap: 8,
+          alignItems: "center",
+
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ minWidth: 320 }}>
           <InputGroup>
             <InputGroup.Text>검색</InputGroup.Text>
             <Form.Control
-              placeholder="이름 / 닉네임"
+              placeholder="아이디 / 닉네임"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </InputGroup>
-        </Col>
+        </div>
 
-        <Col xs="auto">
-          <Form.Group>
-            <Form.Label className="small mb-1">역할</Form.Label>
-            <Form.Select
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(0);
-              }}
-              size="sm"
-            >
-              <option value="">전체</option>
-              <option value="admin">관리자</option>
-              <option value="user">유저</option>
-            </Form.Select>
-          </Form.Group>
-        </Col>
+        <Form.Group className="mb-0">
+          <Form.Label className="small mb-1">권한</Form.Label>
+          <Form.Select
+            value={roleFilter}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(0);
+            }}
+            size="sm"
+          >
+            <option value="">전체</option>
+            <option value="user">유저</option>
+            <option value="admin">관리자</option>
+          </Form.Select>
+        </Form.Group>
 
-        <Col xs="auto">
-          <Form.Group>
-            <Form.Label className="small mb-1">정지여부</Form.Label>
-            <Form.Select
-              value={suspendedFilter}
-              onChange={(e) => {
-                setSuspendedFilter(e.target.value);
-                setPage(0);
-              }}
-              size="sm"
-            >
-              <option value="">전체</option>
-              <option value="true">정지</option>
-              <option value="false">정상</option>
-            </Form.Select>
-          </Form.Group>
-        </Col>
+        <Form.Group className="mb-0">
+          <Form.Label className="small mb-1">정지</Form.Label>
+          <Form.Select
+            value={suspendedFilter}
+            onChange={(e) => {
+              setSuspendedFilter(e.target.value);
+              setPage(0);
+            }}
+            size="sm"
+          >
+            <option value="">전체</option>
+            <option value="true">정지</option>
+            <option value="false">정상</option>
+          </Form.Select>
+        </Form.Group>
 
-        <Col xs="auto">
+        {/* 오른쪽 끝으로 밀기 */}
+        <div className="ms-auto">
           <Button
             variant="outline-secondary"
             size="sm"
@@ -255,13 +262,15 @@ const AdminUserListPage = () => {
           >
             초기화
           </Button>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
-      <div style={{ width: "100%" }}>
+      {/* 리스트 */}
+      <div style={{ minWidth: 320 }}>
         <DataGrid
           rows={rows}
           columns={columns}
+          getRowId={(r) => r.id ?? r.userId}
           autoHeight
           disableRowSelectionOnClick
           pagination
@@ -270,20 +279,21 @@ const AdminUserListPage = () => {
           rowCount={rowCount}
           page={page}
           pageSize={pageSize}
-          onPaginationModelChange={(model) => {
-            // v6: {pageSize, page}
-            setPage(model.page ?? 0);
-            setPageSize(model.pageSize ?? DEFAULT_SIZE);
+          onPaginationModelChange={(m) => {
+            setPage(m.page ?? DEFAULT_PAGE);
+            setPageSize(m.pageSize ?? DEFAULT_SIZE);
           }}
-          onSortModelChange={(model) => setSortModel(model)}
+          onSortModelChange={(m) => setSortModel(m)}
           density="compact"
           sx={{
-            // 다크/라이트 모드와 잘 어울리도록 테두리/글자색은 부트스트랩 변수에 맡겨도 OK
             "& .MuiDataGrid-cell": { fontVariantNumeric: "tabular-nums" },
+            "& .MuiDataGrid-columnHeaders": {
+              backgroundColor: "background.paper",
+            },
           }}
         />
       </div>
-    </div>
+    </>
   );
 };
 

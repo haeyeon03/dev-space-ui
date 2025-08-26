@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/api-client";
 import "./NewsViewPage.css";
 
 const NewsViewPage = ({ refreshNewsPost }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [newsItem, setNewsItem] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -15,6 +16,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
   const [editingText, setEditingText] = useState("");
   const [loginUserId, setLoginUserId] = useState(null);
 
+  // 로그인 정보 추출
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -28,6 +30,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
     }
   }, []);
 
+  // 뉴스 상세 조회
   useEffect(() => {
     const fetchNewsItem = async () => {
       try {
@@ -41,6 +44,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
     fetchNewsItem();
   }, [id, refreshNewsPost]);
 
+  // 댓글 조회
   const fetchComments = async (page = 0, reset = false) => {
     try {
       const data = await api.get(
@@ -59,6 +63,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
     if (id) fetchComments(0, true);
   }, [id]);
 
+  // 댓글 등록
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     try {
@@ -71,6 +76,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
     }
   };
 
+  // 댓글 수정
   const handleCommentUpdate = async (commentId) => {
     if (!editingText.trim()) return;
     try {
@@ -86,6 +92,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
     }
   };
 
+  // 댓글 삭제
   const handleCommentDelete = async (commentId) => {
     try {
       await api.delete(`/news-posts/${id}/comments/${commentId}`);
@@ -98,9 +105,15 @@ const NewsViewPage = ({ refreshNewsPost }) => {
 
   // 이미지 캐러셀
   const images =
-    newsItem?.images || (newsItem?.imageUrl ? [newsItem.imageUrl] : []);
+    newsItem?.imageUrls && newsItem.imageUrls.length > 0
+      ? newsItem.imageUrls
+      : newsItem?.url
+        ? [newsItem.url]
+        : [];
+
   const handlePrevClick = () =>
     setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+
   const handleNextClick = useCallback(
     () =>
       setCurrentImageIndex((prev) =>
@@ -108,6 +121,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
       ),
     [images.length]
   );
+
   useEffect(() => {
     if (images.length === 0) return;
     const intervalId = setInterval(handleNextClick, 3000);
@@ -152,6 +166,14 @@ const NewsViewPage = ({ refreshNewsPost }) => {
               {sentence}
             </p>
           ))}
+
+          {/* 목록가기 버튼 */}
+          <button
+            className="back-to-list-btn"
+            onClick={() => navigate("/news")}
+          >
+            목록가기
+          </button>
         </div>
       </div>
 
