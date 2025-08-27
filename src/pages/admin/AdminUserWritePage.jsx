@@ -1,46 +1,50 @@
-import react, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/api-client";
 import {
+  Box,
   Container,
-  Row,
-  Col,
+  Grid,
   Card,
-  Form,
+  CardContent,
+  CardHeader,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Chip,
+  Stack,
+  Switch,
   Button,
-  Spinner,
   Alert,
-  Badge,
-  InputGroup,
-} from "react-bootstrap";
+  Divider,
+  InputAdornment,
+} from "@mui/material";
+import { ArrowBack, Save, Block, LockOpen } from "@mui/icons-material";
 
 const AdminUserWritePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
 
-  //원본, 편집
   const [saving, setSaving] = useState(false);
   const [okMsg, setOkMsg] = useState(null);
 
-  //원본 유저정보
   const [user, setUser] = useState(null);
-  const [form, setForm] = useState({
-    nickname: "",
-    gender: "", // "M" or "F"
-    role: "USER", // "ADMIN" or "USER"
-  });
+  const [form, setForm] = useState({ nickname: "", gender: "", role: "user" });
 
-  // 정지 상태/입력
   const [isBanned, setIsBanned] = useState(false);
-  const [banEndAt, setBanEndAt] = useState(null); // string or null
-  const [penaltyOn, setPenaltyOn] = useState(false); // 새 정지 등록 토글
+  const [banEndAt, setBanEndAt] = useState(null);
+  const [penaltyOn, setPenaltyOn] = useState(false);
   const [penaltyReason, setPenaltyReason] = useState("");
-  const [penaltyStart, setPenaltyStart] = useState(""); // datetime-local
-  const [penaltyHours, setPenaltyHours] = useState(24); // 기간(시간)
+  const [penaltyStart, setPenaltyStart] = useState("");
+  const [penaltyHours, setPenaltyHours] = useState(24);
 
-  // 유틸
   const toDateTimeLocal = (d) => {
-    // Date -> 'YYYY-MM-DDTHH:mm'
     const pad = (n) => String(n).padStart(2, "0");
     const yyyy = d.getFullYear();
     const mm = pad(d.getMonth() + 1);
@@ -50,33 +54,25 @@ const AdminUserWritePage = () => {
     return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
   };
 
-  // 초기 로드
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        // GET /api/admins/users/{userId}
         const data = await api.get(
           `/admins/users/${encodeURIComponent(userId)}`
         );
         if (!alive) return;
-
         setUser(data);
         setForm({
           nickname: data?.nickname ?? "",
-          gender: (data?.gender ?? "").toString().toUpperCase(), // 'M'|'F'|''
-          role: (data?.role ?? "user").toLowerCase(), // 'admin'|'user'
+          gender: (data?.gender ?? "").toString().toUpperCase(),
+          role: (data?.role ?? "user").toLowerCase(),
         });
-
-        const banned = Boolean(data?.banned);
-        setIsBanned(banned);
+        setIsBanned(Boolean(data?.banned));
         setBanEndAt(data?.banEndAt ?? null);
-
-        // 정지 등록 기본 시작시간: 지금
         setPenaltyStart(toDateTimeLocal(new Date()));
       } catch (e) {
         console.error(e);
-        alert("사용자 정보를 불러오지 못했습니다.");
       }
     })();
     return () => {
@@ -91,47 +87,37 @@ const AdminUserWritePage = () => {
     return "기타";
   }, [user]);
 
-  // 저장 핸들러
   const onSave = async () => {
     setSaving(true);
     setOkMsg(null);
     try {
-      // 1) 기본 정보 수정 (닉네임/성별)
       const baseChanged =
         form.nickname !== (user?.nickname ?? "") ||
         form.gender.toUpperCase() !==
           (user?.gender ?? "").toString().toUpperCase();
 
       if (baseChanged) {
-        // PUT /api/admins/users/{userId}
         await api.put(`/admins/users/${encodeURIComponent(userId)}`, {
           nickname: form.nickname,
-          gender: form.gender, // 'M'|'F'|''
+          gender: form.gender,
         });
       }
 
-      // 2) 역할 변경
       if (
         (form.role || "").toLowerCase() !== (user?.role ?? "").toLowerCase()
       ) {
-        // PATCH /api/admins/users/{userId}/role  { role: 'admin' | 'user' }
-        (await api.patch)
-          ? await api.patch(
-              `/admins/users/${encodeURIComponent(userId)}/role`,
-              {
-                role: form.role,
-              }
-            )
-          : // api-client에 patch 없으면 post로 구현된 경우 대비
-            await api.post(`/admins/users/${encodeURIComponent(userId)}/role`, {
-              role: form.role,
-            });
+        if (api.patch) {
+          await api.patch(`/admins/users/${encodeURIComponent(userId)}/role`, {
+            role: form.role,
+          });
+        } else {
+          await api.post(`/admins/users/${encodeURIComponent(userId)}/role`, {
+            role: form.role,
+          });
+        }
       }
 
-      // 3) 정지 등록
       if (penaltyOn) {
-        // POST /api/admins/users/{userId}/penalties
-        // body: { reason, effectiveAt, durationSec }
         const eff = new Date(penaltyStart);
         const durationSec = Math.max(
           0,
@@ -147,7 +133,6 @@ const AdminUserWritePage = () => {
         );
       }
 
-      // 저장 후 다시 로드
       const fresh = await api.get(
         `/admins/users/${encodeURIComponent(userId)}`
       );
@@ -164,18 +149,15 @@ const AdminUserWritePage = () => {
       setOkMsg("변경사항이 저장되었습니다.");
     } catch (e) {
       console.error(e);
-      alert("저장 중 오류가 발생했습니다.");
     } finally {
       setSaving(false);
     }
   };
 
-  // 정지 해제
   const onLiftPenalty = async () => {
     setSaving(true);
     setOkMsg(null);
     try {
-      // POST /api/admins/users/{userId}/penalties/lift
       await api.post(
         `/admins/users/${encodeURIComponent(userId)}/penalties/lift`,
         {}
@@ -188,7 +170,7 @@ const AdminUserWritePage = () => {
       setBanEndAt(fresh?.banEndAt ?? null);
       setOkMsg("정지를 해제했습니다.");
     } catch (e) {
-      alert("정지 해제 중 오류가 발생했습니다.");
+      console.error(e);
     } finally {
       setSaving(false);
     }
@@ -196,9 +178,15 @@ const AdminUserWritePage = () => {
 
   if (!user) {
     return (
-      <Container fluid className="py-3">
-        <Alert variant="warning">사용자 정보를 불러올 수 없습니다.</Alert>
-        <Button variant="secondary" onClick={() => navigate(-1)}>
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          사용자 정보를 불러올 수 없습니다.
+        </Alert>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate(-1)}
+        >
           뒤로
         </Button>
       </Container>
@@ -206,181 +194,197 @@ const AdminUserWritePage = () => {
   }
 
   return (
-    <Container fluid className="py-3">
-      <Row className="mb-3">
-        <Col>
-          <h4 className="mb-0">사용자 수정</h4>
-          <div className="text-muted small">
-            USER ID: <code>{userId}</code>
-          </div>
-        </Col>
-        <Col className="text-end">
-          <Button
-            variant="secondary"
-            className="me-2"
-            onClick={() => navigate(-1)}
-          >
-            목록
-          </Button>
-          <Button variant="primary" onClick={onSave} disabled={saving}>
-            {saving ? "저장 중…" : "저장"}
-          </Button>
-        </Col>
-      </Row>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Grid container spacing={25} alignItems="center" sx={{ mb: 3 }}>
+        <Grid item xs>
+          <Typography variant="h5" fontWeight={700}>
+            사용자 수정
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            USER ID:{" "}
+            <Box component="span" sx={{ fontFamily: "monospace" }}>
+              {userId}
+            </Box>
+          </Typography>
+        </Grid>
+        <Grid item>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate(-1)}
+            >
+              목록
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Save />}
+              onClick={onSave}
+              disabled={saving}
+            >
+              {saving ? "저장 중" : "저장"}
+            </Button>
+          </Stack>
+        </Grid>
+      </Grid>
 
       {okMsg && (
-        <Alert variant="success" className="mb-3">
+        <Alert severity="success" sx={{ mb: 2 }}>
           {okMsg}
         </Alert>
       )}
 
-      <Row className="g-3">
+      <Grid container spacing={3} alignItems="stretch">
         {/* 기본 정보 */}
-        <Col lg={6}>
-          <Card className="h-100 shadow-sm">
-            <Card.Body>
-              <Card.Title>기본 정보</Card.Title>
-
-              <Form.Group className="mb-3" disabled>
-                <Form.Label>닉네임</Form.Label>
-                <Form.Control
+        <Grid item xs={12} md={6}>
+          <Card elevation={2} sx={{ borderRadius: 3, height: "100%" }}>
+            <CardHeader title="기본 정보" sx={{ pb: 0 }} />
+            <CardContent>
+              <Stack spacing={2}>
+                <TextField
+                  disabled
+                  label="닉네임"
                   value={form.nickname}
                   onChange={(e) =>
                     setForm((s) => ({ ...s, nickname: e.target.value }))
                   }
-                  maxLength={30}
+                  inputProps={{ maxLength: 30 }}
+                  fullWidth
                 />
-              </Form.Group>
+                <FormControl fullWidth>
+                  <InputLabel id="gender-label">성별</InputLabel>
+                  <Select
+                    disabled
+                    labelId="gender-label"
+                    label="성별"
+                    value={form.gender}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, gender: e.target.value }))
+                    }
+                  >
+                    <MenuItem value="">미지정</MenuItem>
+                    <MenuItem value="M">남성</MenuItem>
+                    <MenuItem value="F">여성</MenuItem>
+                  </Select>
+                </FormControl>
 
-              <Form.Group className="mb-3" disabled>
-                <Form.Label>성별</Form.Label>
-                <Form.Select
-                  value={form.gender}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, gender: e.target.value }))
-                  }
-                >
-                  <option value="">미지정</option>
-                  <option value="M">남성</option>
-                  <option value="F">여성</option>
-                </Form.Select>
-                <div className="small text-muted mt-1">
-                  현재 저장된 값: <strong>{genderLabel}</strong>
-                </div>
-              </Form.Group>
-
-              <Form.Group>
-                <Form.Label>역할</Form.Label>
-                <div className="d-flex gap-3">
-                  <Form.Check
-                    inline
-                    type="radio"
-                    name="role"
-                    id="role-user"
-                    label="유저"
-                    checked={form.role === "user"}
-                    onChange={() => setForm((s) => ({ ...s, role: "user" }))}
-                  />
-                  <Form.Check
-                    inline
-                    type="radio"
-                    name="role"
-                    id="role-admin"
-                    label="관리자"
-                    checked={form.role === "admin"}
-                    onChange={() => setForm((s) => ({ ...s, role: "admin" }))}
-                  />
-                </div>
-              </Form.Group>
-            </Card.Body>
+                <FormControl>
+                  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                    역할
+                  </Typography>
+                  <RadioGroup
+                    row
+                    value={form.role}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, role: e.target.value }))
+                    }
+                  >
+                    <FormControlLabel
+                      value="user"
+                      control={<Radio />}
+                      label="유저"
+                    />
+                    <FormControlLabel
+                      value="admin"
+                      control={<Radio />}
+                      label="관리자"
+                    />
+                  </RadioGroup>
+                </FormControl>
+              </Stack>
+            </CardContent>
           </Card>
-        </Col>
+        </Grid>
 
         {/* 정지 관리 */}
-        <Col lg={6}>
-          <Card className="h-100 shadow-sm">
-            <Card.Body>
-              <Card.Title>정지 관리</Card.Title>
-
-              <div className="mb-3">
-                현재 상태:{" "}
-                {isBanned ? (
-                  <Badge bg="danger">정지</Badge>
-                ) : (
-                  <Badge bg="success">정상</Badge>
+        <Grid item xs={12} md={6}>
+          <Card elevation={2} sx={{ borderRadius: 3, height: "100%" }}>
+            <CardHeader title="정지 관리" sx={{ pb: 0 }} />
+            <CardContent>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    현재 상태
+                  </Typography>
+                  {isBanned ? (
+                    <Chip label="정지" color="error" />
+                  ) : (
+                    <Chip label="정상" color="success" />
+                  )}
+                  {isBanned && banEndAt && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ ml: 1 }}
+                    >
+                      종료 예정: {new Date(banEndAt).toLocaleString()}
+                    </Typography>
+                  )}
+                </Box>
+                {isBanned && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<LockOpen />}
+                    onClick={onLiftPenalty}
+                    disabled={saving}
+                  >
+                    정지 해제
+                  </Button>
                 )}
-                {isBanned && banEndAt ? (
-                  <span className="small text-muted ms-2">
-                    종료 예정: {new Date(banEndAt).toLocaleString()}
-                  </span>
-                ) : null}
-              </div>
-
-              {isBanned ? (
-                <Button
-                  variant="outline-danger"
-                  className="mb-3"
-                  onClick={onLiftPenalty}
-                  disabled={saving}
-                >
-                  정지 해제
-                </Button>
-              ) : null}
-
-              <Form.Check
-                className="mb-3"
-                type="switch"
-                id="penalty-on"
-                label="새 정지 등록"
-                checked={penaltyOn}
-                onChange={(e) => setPenaltyOn(e.target.checked)}
-              />
-
-              <fieldset disabled={!penaltyOn}>
-                <Form.Group className="mb-3">
-                  <Form.Label>사유</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={2}
-                    placeholder="신고/운영 방침 위반 등"
-                    value={penaltyReason}
-                    onChange={(e) => setPenaltyReason(e.target.value)}
+                <Divider />
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="body2">새 정지 등록</Typography>
+                  <Switch
+                    checked={penaltyOn}
+                    onChange={(e) => setPenaltyOn(e.target.checked)}
                   />
-                </Form.Group>
-
-                <Row>
-                  <Col md={7}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>적용 시작 (KST)</Form.Label>
-                      <Form.Control
-                        type="datetime-local"
-                        value={penaltyStart}
-                        onChange={(e) => setPenaltyStart(e.target.value)}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={5}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>기간(시간)</Form.Label>
-                      <InputGroup>
-                        <Form.Control
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={penaltyHours}
-                          onChange={(e) => setPenaltyHours(e.target.value)}
-                        />
-                        <InputGroup.Text>시간</InputGroup.Text>
-                      </InputGroup>
-                      <div className="form-text">예: 24시간 = 1일</div>
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </fieldset>
-            </Card.Body>
+                </Stack>
+                <TextField
+                  label="사유"
+                  placeholder="신고/운영 방침 위반 등"
+                  value={penaltyReason}
+                  onChange={(e) => setPenaltyReason(e.target.value)}
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  disabled={!penaltyOn}
+                />
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={7}>
+                    <TextField
+                      label="적용 시작 (KST)"
+                      type="datetime-local"
+                      value={penaltyStart}
+                      onChange={(e) => setPenaltyStart(e.target.value)}
+                      fullWidth
+                      disabled={!penaltyOn}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={5}>
+                    <TextField
+                      label="기간(시간)"
+                      type="number"
+                      inputProps={{ min: 0, step: 1 }}
+                      value={penaltyHours}
+                      onChange={(e) => setPenaltyHours(e.target.value)}
+                      fullWidth
+                      disabled={!penaltyOn}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">시간</InputAdornment>
+                        ),
+                      }}
+                      helperText="예: 24시간 = 1일"
+                    />
+                  </Grid>
+                </Grid>
+              </Stack>
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
+        </Grid>
+      </Grid>
     </Container>
   );
 };
