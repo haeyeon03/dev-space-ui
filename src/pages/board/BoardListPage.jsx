@@ -176,7 +176,7 @@ export default function BoardListPage() {
               borderRadius: 6,
               border: "1px solid var(--mui-palette-divider)",
               background: "var(--mui-palette-grey-500)",
-              color: "var(--mui-palette-text-primary-contrastText)",
+              color: "var(--mui-palette-primary-contrastText)",
               cursor: mineOnly ? "default" : "pointer",
               opacity: mineOnly ? 0.6 : 1,
             }}
