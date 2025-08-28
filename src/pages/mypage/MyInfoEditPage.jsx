@@ -1,14 +1,11 @@
 // src/pages/mypage/MyInfoEditPage.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setProfileImage } from "../../store/user-slice";
 
 /* ====== 자동 API 베이스 감지 유틸 ====== */
-const CANDIDATE_API_BASES = [
-  import.meta.env.VITE_API_BASE || "/api",
-  `${location.protocol}//${location.hostname}:8080/api`,
-];
+const API_BASE = import.meta.env.VITE_API_BASE || `${location.protocol}//${location.hostname}:8080/api`;
 
 function authHeaders(extra = {}) {
   const t = localStorage.getItem("token");
@@ -17,17 +14,13 @@ function authHeaders(extra = {}) {
 
 // API 오리진 계산 (정적자원 URL 절대화용)
 const getApiOrigin = () => {
-  const cached = sessionStorage.getItem("API_BASE_CACHED");
-  const base = cached || (import.meta.env.VITE_API_BASE || "/api");
-  const pick = /^https?:\/\//i.test(base)
-    ? base
-    : `${location.protocol}//${location.hostname}:8080/api`;
   try {
-    return new URL(pick).origin; // 예: http://localhost:8080
+    return new URL(API_BASE).origin;
   } catch {
-    return location.origin;
+    return `${location.protocol}//${location.hostname}:8080`;
   }
 };
+
 const toAbsoluteAssetUrl = (u) => {
   if (!u) return "";
   if (/^https?:\/\//i.test(u)) return u;
@@ -35,38 +28,26 @@ const toAbsoluteAssetUrl = (u) => {
   return u.startsWith("/") ? origin + u : `${origin}/${u}`;
 };
 
-// JSON 전용 fetch (상대경로면 가능한 베이스들을 시도)
-async function fetchJSON(urlOrPath, options = {}) {
-  const isAbsolute = /^https?:\/\//i.test(urlOrPath);
-  if (isAbsolute) return _fetchJSONCore(urlOrPath, options);
-
-  const cached = sessionStorage.getItem("API_BASE_CACHED");
-  const bases = cached
-    ? [cached, ...CANDIDATE_API_BASES.filter((b) => b !== cached)]
-    : CANDIDATE_API_BASES;
-
-  let lastErr;
-  for (const base of bases) {
-    const full = `${base}${urlOrPath}`;
-    try {
-      const res = await fetch(full, options);
-      const ct = res.headers.get("content-type") || "";
-      if (!ct.includes("application/json")) {
-        lastErr = new Error(`Non-JSON response from ${full}`);
-        continue;
-      }
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = data?.message || data?.error || res.statusText;
-        throw new Error(msg || `HTTP ${res.status}`);
-      }
-      sessionStorage.setItem("API_BASE_CACHED", base);
-      return data ?? {};
-    } catch (e) {
-      lastErr = e;
-    }
+// JSON 전용 fetch (단일 절대 베이스만 사용)
+async function fetchJSON(pathOrUrl, options = {}) {
+  const url = /^https?:\/\//i.test(pathOrUrl)
+    ? pathOrUrl
+    : `${API_BASE}${pathOrUrl}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      Accept: "application/json, text/plain;q=0.9, */*;q=0.1",
+      ...options.headers,
+    },
+  });
+  const ct = res.headers.get("content-type") || "";
+  const isJson = ct.includes("application/json");
+  const data = isJson ? await res.json().catch(() => null) : null;
+  if (!res.ok) {
+    const msg = data?.message || data?.error || res.statusText || `HTTP ${res.status}`;
+    throw new Error(msg);
   }
-  throw lastErr || new Error("No API base reachable");
+  return data ?? {};
 }
 
 async function _fetchJSONCore(url, options = {}) {
@@ -84,10 +65,9 @@ async function _fetchJSONCore(url, options = {}) {
 
 const MYPAGE = "/mypage";
 
-// 닉네임: 한글/영문 2~10자
+// 규칙
 const NICK_RULE = /^[A-Za-z가-힣]{2,10}$/;
 const NICK_RULE_MSG = "닉네임은 한글 또는 영문 2~10자로 입력해주세요.";
-// 새 비밀번호: 영문+숫자+특수문자, 8~20자
 const PW_RULE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,20}$/;
 const PW_RULE_MSG = "비밀번호는 영문, 숫자, 특수문자 포함 8~20자로 입력해주세요.";
 
@@ -122,9 +102,11 @@ export default function MyInfoEditPage() {
   const [pwdInlineMsg, setPwdInlineMsg] = useState("");
   const [pwdInlineErr, setPwdInlineErr] = useState("");
 
-  // 닉네임 중복체크 인라인 메시지
+  // 닉네임/이메일 중복체크 인라인 메시지
   const [nickInlineMsg, setNickInlineMsg] = useState("");
   const [nickInlineErr, setNickInlineErr] = useState("");
+  const [emailInlineMsg, setEmailInlineMsg] = useState("");
+  const [emailInlineErr, setEmailInlineErr] = useState("");
 
   // 이미지 업로드
   const [file, setFile] = useState(null);
@@ -137,7 +119,6 @@ export default function MyInfoEditPage() {
   const [imgError, setImgError] = useState(false);
   const [imgTriedAuth, setImgTriedAuth] = useState(false);
   const lastBlobUrlRef = useRef("");
-  const globalBlobUrlRef = useRef("");
 
   // 유효성
   const nick = profile.nickname || "";
@@ -154,27 +135,32 @@ export default function MyInfoEditPage() {
         const raw = await fetchJSON(MYPAGE, { headers: authHeaders() });
         const d =
           raw && typeof raw === "object" ? raw.data ?? raw.result ?? raw.body ?? raw : {};
-        setProfile((p) => ({
-          ...p,
+        const next = {
           userId: d.userId ?? d.id ?? d.memberId ?? d.username ?? "",
           nickname: d.nickname ?? d.nickName ?? d.name ?? d.displayName ?? "",
           email: d.email ?? d.userEmail ?? d.mail ?? "",
           gender: d.gender ?? d.sex ?? "",
           birthdate: d.birthdate ?? d.birthDate ?? d.birth_day ?? "",
-          profileImageUrl:
-            d.profileImageUrl ?? d.profile_image_url ?? d.avatarUrl ?? d.avatar ?? "",
+          profileImageUrl: d.profileImageUrl ?? d.profile_image_url ?? d.avatarUrl ?? d.avatar ?? "",
           alertKeyword: d.alertKeyword ?? "",
           extra1: d.extra1 ?? "",
           extra2: d.extra2 ?? "",
           extra3: d.extra3 ?? "",
-        }));
+        };
+        setProfile(next);
+
+        // 미니 프로필 즉시 동기화
+        if (next.profileImageUrl) {
+          const abs = withBust(toAbsoluteAssetUrl(next.profileImageUrl));
+          dispatch(setProfileImage(abs));
+        }
       } catch (e) {
         setErr(e.message || "내 정보 조회 실패");
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [dispatch]);
 
   // 미리보기/블롭URL 메모리 해제
   useEffect(
@@ -184,12 +170,6 @@ export default function MyInfoEditPage() {
     },
     [preview]
   );
-
-  useEffect(() => () => {
-    if (globalBlobUrlRef.current) {
-      try { URL.revokeObjectURL(globalBlobUrlRef.current); } catch { }
-    }
-  }, []);
 
   // 프로필 이미지 URL 변경 시 1차: 공개 URL 시도
   useEffect(() => {
@@ -226,55 +206,15 @@ export default function MyInfoEditPage() {
     }
   };
 
-  // 업로드 후 서버 URL을 Authorization으로 받아 blob URL로 전역 갱신
-  const syncGlobalAvatar = async (rawUrl) => {
-    if (!rawUrl) return;
-    const abs = toAbsoluteAssetUrl(rawUrl);
-
-    try {
-      const res = await fetch(abs, { headers: authHeaders() });
-      if (res.ok) {
-        const blob = await res.blob();
-        const objUrl = URL.createObjectURL(blob);
-
-        // 이전 전역 blob URL 정리
-        if (globalBlobUrlRef.current) {
-          try { URL.revokeObjectURL(globalBlobUrlRef.current); } catch { }
-        }
-        globalBlobUrlRef.current = objUrl;
-
-        // ✅ 전역 아바타 즉시 갱신
-        dispatch(setProfileImage(objUrl));
-        return;
-      }
-    } catch {
-      // 무시하고 fallback 진행
-    }
-
-    // ❗fallback: 공개 URL(캐시버스트)로라도 반영
-    dispatch(setProfileImage(withBust(abs)));
-  };
-
-
   const onSelectFile = (e) => {
     const f = e.target.files?.[0];
-
-    // 이전 미리보기 정리
     if (preview) {
-      try { URL.revokeObjectURL(preview); } catch { }
+      try {
+        URL.revokeObjectURL(preview);
+      } catch { }
     }
-
-    if (f) {
-      const url = URL.createObjectURL(f);
-      setFile(f);
-      setPreview(url);
-
-      // ✅ 상단/하단 미니 아바타 즉시 변경
-      dispatch(setProfileImage(url));
-    } else {
-      setFile(null);
-      setPreview("");
-    }
+    setFile(f || null);
+    setPreview(f ? URL.createObjectURL(f) : "");
   };
 
   // 이미지 업로드
@@ -295,24 +235,26 @@ export default function MyInfoEditPage() {
           d.avatarUrl ??
           d.avatar ??
           "";
-        if (url) setProfile((p) => ({ ...p, profileImageUrl: url }));
+        if (url) {
+          setProfile((p) => ({ ...p, profileImageUrl: url }));
+          // ⬇️ 업로드 후 즉시 미니 프로필 갱신
+          const abs = withBust(toAbsoluteAssetUrl(url));
+          dispatch(setProfileImage(abs));
+        }
       } catch (e) {
         console.warn("프로필 재조회 실패:", e);
       }
     };
 
     try {
-      const apiBase =
-        sessionStorage.getItem("API_BASE_CACHED") ||
-        (import.meta.env.VITE_API_BASE || "/api");
-      const uploadUrl = `${apiBase}${MYPAGE}/profile-image`;
+      const uploadUrl = `${API_BASE}${MYPAGE}/profile-image`;
 
       const fd = new FormData();
       fd.append("file", file);
 
       const res = await fetch(uploadUrl, {
         method: "POST",
-        headers: authHeaders(), // FormData는 Content-Type 자동 설정
+        headers: authHeaders(),
         body: fd,
       });
 
@@ -348,20 +290,12 @@ export default function MyInfoEditPage() {
       } catch { }
 
       if (uploadedUrl) {
-        // 기존 프로필 상태 갱신
         setProfile((p) => ({ ...p, profileImageUrl: uploadedUrl }));
-
-        // ✅ 업로드 직후 전역 아바타를 blob URL로 동기화
-        await syncGlobalAvatar(uploadedUrl);
+        // ⬇️ 업로드 결과 URL 즉시 반영
+        const abs = withBust(toAbsoluteAssetUrl(uploadedUrl));
+        dispatch(setProfileImage(abs));
       } else {
-        // 서버가 URL을 본문에 안 줬다면 재조회 후 그 값으로 동기화
         await reloadProfileImage();
-        try {
-          const raw = await fetchJSON(MYPAGE, { headers: authHeaders() });
-          const d = raw && typeof raw === "object" ? (raw.data ?? raw.result ?? raw.body ?? raw) : {};
-          const refreshed = d.profileImageUrl ?? d.profile_image_url ?? d.avatarUrl ?? d.avatar ?? "";
-          if (refreshed) await syncGlobalAvatar(refreshed);
-        } catch { }
       }
 
       setMsg("프로필 이미지가 업데이트되었습니다.");
@@ -399,9 +333,7 @@ export default function MyInfoEditPage() {
     } catch (e1) {
       try {
         const r2 = await _fetchJSONCore(
-          `${CANDIDATE_API_BASES[1]}${MYPAGE}/check-nickname?nickname=${encodeURIComponent(
-            v
-          )}`,
+          `${CANDIDATE_API_BASES[1]}${MYPAGE}/check-nickname?nickname=${encodeURIComponent(v)}`,
           { headers: authHeaders() }
         );
         const ok2 = r2?.available ?? r2?.ok ?? true;
@@ -414,26 +346,31 @@ export default function MyInfoEditPage() {
     }
   };
 
-  // 이메일 중복확인
+  // 이메일 중복확인 (인라인 메시지로 표기)
   const checkEmail = async () => {
-    setMsg("");
-    setErr("");
+    setEmailInlineMsg("");
+    setEmailInlineErr("");
     const v = (profile.email || "").trim();
-    if (!v) return setErr("이메일을 입력해 주세요.");
+    if (!v) return setEmailInlineErr("이메일을 입력해 주세요.");
     try {
-      await fetchJSON(`${MYPAGE}/check-email?email=${encodeURIComponent(v)}`, {
+      const r = await fetchJSON(`${MYPAGE}/check-email?email=${encodeURIComponent(v)}`, {
         headers: authHeaders(),
       });
-      setMsg("사용 가능한 이메일입니다.");
+      const ok = r?.available ?? r?.ok ?? true;
+      if (ok === false) setEmailInlineErr(r?.message || "이미 사용 중인 이메일입니다.");
+      else setEmailInlineMsg(r?.message || "사용 가능한 이메일입니다.");
     } catch (e1) {
       try {
-        await _fetchJSONCore(
+        const r2 = await _fetchJSONCore(
           `${CANDIDATE_API_BASES[1]}${MYPAGE}/check-email?email=${encodeURIComponent(v)}`,
           { headers: authHeaders() }
         );
-        setMsg("사용 가능한 이메일입니다.");
+        const ok2 = r2?.available ?? r2?.ok ?? true;
+        if (ok2 === false)
+          setEmailInlineErr(r2?.message || "이미 사용 중인 이메일입니다.");
+        else setEmailInlineMsg(r2?.message || "사용 가능한 이메일입니다.");
       } catch (e2) {
-        setErr(e2?.message || e1?.message || "이메일 중복확인 실패");
+        setEmailInlineErr(e2?.message || e1?.message || "이메일 중복확인 실패");
       }
     }
   };
@@ -548,7 +485,6 @@ export default function MyInfoEditPage() {
             )}
           </div>
 
-          {/* 버튼 2개를 한 줄에 배치 */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
             <button
               type="button"
@@ -574,7 +510,6 @@ export default function MyInfoEditPage() {
             style={{ display: "none" }}
           />
 
-          {/* 미리보기는 버튼 아래에 */}
           {preview && (
             <img
               src={preview}
@@ -652,12 +587,32 @@ export default function MyInfoEditPage() {
               <input
                 style={cellInput}
                 value={profile.email}
-                onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
+                onChange={(e) => {
+                  setProfile((p) => ({ ...p, email: e.target.value }));
+                  setEmailInlineMsg("");
+                  setEmailInlineErr("");
+                }}
                 placeholder="email@example.com"
               />
               <button type="button" onClick={checkEmail} style={smallChip}>
                 중복확인
               </button>
+
+              {(emailInlineMsg || emailInlineErr) && (
+                <div
+                  style={{
+                    width: "100%",
+                    fontSize: 12,
+                    marginTop: 4,
+                    color: emailInlineErr
+                      ? "var(--mui-palette-error-main)"
+                      : "var(--mui-palette-success-main)",
+                  }}
+                  aria-live="polite"
+                >
+                  {emailInlineErr || emailInlineMsg}
+                </div>
+              )}
             </div>
           </div>
 
@@ -729,51 +684,6 @@ export default function MyInfoEditPage() {
                   {pwdInlineErr || pwdInlineMsg}
                 </div>
               )}
-            </div>
-          </div>
-
-          <div style={tr}>
-            <div style={th}>알림키워드 등록</div>
-            <div style={tdInput}>
-              <input
-                style={cellInput}
-                value={profile.alertKeyword}
-                onChange={(e) =>
-                  setProfile((p) => ({ ...p, alertKeyword: e.target.value }))
-                }
-                placeholder="예: 스프링, 리액트"
-              />
-            </div>
-          </div>
-
-          <div style={tr}>
-            <div style={th}>기타등록1</div>
-            <div style={tdInput}>
-              <input
-                style={cellInput}
-                value={profile.extra1}
-                onChange={(e) => setProfile((p) => ({ ...p, extra1: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div style={tr}>
-            <div style={th}>기타등록2</div>
-            <div style={tdInput}>
-              <input
-                style={cellInput}
-                value={profile.extra2}
-                onChange={(e) => setProfile((p) => ({ ...p, extra2: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div style={tr}>
-            <div style={th}>기타등록3</div>
-            <div style={tdInput}>
-              <input
-                style={cellInput}
-                value={profile.extra3}
-                onChange={(e) => setProfile((p) => ({ ...p, extra3: e.target.value }))}
-              />
             </div>
           </div>
         </div>
