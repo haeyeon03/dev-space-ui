@@ -167,6 +167,9 @@ const NewsViewPage = ({ refreshNewsPost }) => {
             </p>
           ))}
 
+          {/* 조회수만 표시 */}
+          <div className="news-views">조회수: {newsItem.viewCount ?? 0}</div>
+
           {/* 목록가기 버튼 */}
           <button
             className="back-to-list-btn"
