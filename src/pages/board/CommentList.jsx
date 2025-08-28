@@ -1,6 +1,10 @@
+// src/pages/board/CommentList.jsx
 import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { api } from "../../api/api-client";
+
+// MUI
+import { Button, Stack } from "@mui/material";
 
 const TARGET_TYPE = "BOARD_POST";
 const DBG = true; // 콘솔 로깅 보고 싶으면 true
@@ -30,16 +34,6 @@ export default function CommentList({ postId, onAdded }) {
         me?.nickname ?? me?.nickName ?? me?.name ?? me?.displayName ?? state?.nickname ?? null;
 
     const log = (...a) => { if (DBG) console.log("[comments]", ...a); };
-
-    const isMine = (c) => {
-        const cid =
-            c.userId ?? c.memberId ?? c.authorId ?? c.writerId ?? c.user?.userId ?? c.user?.id ?? null;
-        const cnick = c.userNickname ?? c.nickname ?? c.user?.nickname ?? null;
-        if (c.mine || c.owned || c.editable || c.canEdit) return true;
-        if (myId && cid && String(myId) === String(cid)) return true;
-        if (myNick && cnick && myNick === cnick) return true;
-        return false;
-    };
 
     const load = useCallback(
         async (curPage = 0) => {
@@ -98,29 +92,18 @@ export default function CommentList({ postId, onAdded }) {
         setEditText("");
     };
 
-    // 여러 엔드포인트 후보를 순차 시도 (백엔드 안 건드리고 맞는 걸 자동으로 찾기)
+    // 여러 엔드포인트 후보를 순차 시도
     const tryUpdateComment = async (commentId, text) => {
         const candidates = [
-            // ⚑ 가장 유력: 댓글 전용 리소스 + 필요한 파라미터
             { m: "put", url: `/post-comments/${commentId}?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}`, body: { content: text } },
             { m: "patch", url: `/post-comments/${commentId}?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}`, body: { content: text } },
-
-            // 댓글 전용 리소스 (파라미터 없이)
             { m: "put", url: `/post-comments/${commentId}`, body: { content: text } },
             { m: "patch", url: `/post-comments/${commentId}`, body: { content: text } },
-
-            // /comments 계열
             { m: "put", url: `/comments/${commentId}?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}`, body: { content: text } },
             { m: "put", url: `/comments/${commentId}`, body: { content: text } },
-
-            // 게시글 하위 경로 (혹시 열려있으면)
             { m: "put", url: `/board-posts/${postId}/comments/${commentId}?targetType=${encodeURIComponent(TARGET_TYPE)}`, body: { content: text } },
-
-            // 액션형(POST)
             { m: "post", url: `/post-comments/${commentId}/update?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}`, body: { content: text } },
             { m: "post", url: `/comments/${commentId}/update?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}`, body: { content: text } },
-
-            // 본문에 id 전달형
             { m: "put", url: `/board-posts/${postId}/comments`, body: { commentId, content: text, targetType: TARGET_TYPE } },
         ];
 
@@ -141,37 +124,23 @@ export default function CommentList({ postId, onAdded }) {
 
     const tryDeleteComment = async (commentId) => {
         const candidates = [
-            // ⚑ 가장 유력
             { m: "delete", url: `/post-comments/${commentId}?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}` },
-
-            // 댓글 전용 리소스 (파라미터 없이)
             { m: "delete", url: `/post-comments/${commentId}` },
-
-            // /comments 계열
             { m: "delete", url: `/comments/${commentId}?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}` },
             { m: "delete", url: `/comments/${commentId}` },
-
-            // 게시글 하위 경로 (혹시 열려있으면)
             { m: "delete", url: `/board-posts/${postId}/comments/${commentId}?targetType=${encodeURIComponent(TARGET_TYPE)}` },
-
-            // 액션형(POST)
             { m: "post", url: `/post-comments/${commentId}/delete?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}` },
             { m: "post", url: `/comments/${commentId}/delete?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}` },
-
-            // 쿼리스트링 전달형
             { m: "delete", url: `/board-posts/${postId}/comments?commentId=${commentId}&targetType=${encodeURIComponent(TARGET_TYPE)}` },
         ];
 
         let lastErr;
         for (const c of candidates) {
             try {
-                log("DELETE try:", c.m.toUpperCase(), c.url);
                 if (c.m === "delete") await api.delete(c.url);
                 else if (c.m === "post") await api.post(c.url, {});
                 return;
-            } catch (e) {
-                lastErr = e;
-            }
+            } catch (e) { lastErr = e; }
         }
         throw lastErr || new Error("댓글 삭제에 실패했습니다.");
     };
@@ -234,17 +203,14 @@ export default function CommentList({ postId, onAdded }) {
                 />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 8 }}>
                     <span style={{ color: "crimson", fontSize: 12, minHeight: 17 }}>{error}</span>
-                    <button
+                    <Button
                         type="submit"
                         disabled={!token || submitting || !content.trim()}
-                        style={{
-                            height: 32, padding: "0 12px", borderRadius: 6, border: "1px solid #2d5ae7",
-                            background: "#2d5ae7", color: "#fff",
-                            cursor: (!token || submitting || !content.trim()) ? "default" : "pointer"
-                        }}
+                        variant="contained"
+                        sx={{ height: 32, px: 1.5, textTransform: "none" }}
                     >
                         {submitting ? "등록 중..." : "댓글 등록"}
-                    </button>
+                    </Button>
                 </div>
             </form>
 
@@ -265,31 +231,73 @@ export default function CommentList({ postId, onAdded }) {
                         const isEditing = editingId === key;
 
                         return (
-                            <li key={key} style={{ borderTop: "1px solid #eee", padding: "12px 0" }}>
-                                <div style={{ fontSize: 14, color: "#666", display: "flex", justifyContent: "space-between" }}>
+                            <li key={key} className="comment-item" style={{ borderTop: "1px solid #eee", padding: "12px 0" }}>
+                                <div className="comment-meta" style={{ fontSize: 14, color: "#666", display: "flex", justifyContent: "space-between", gap: 12 }}>
                                     <span><b>{nickname}</b> · {created}</span>
 
                                     {token && mine && (
-                                        <span style={{ display: "flex", gap: 8 }}>
+                                        <Stack direction="row" spacing={1} alignItems="center" className="comment-actions">
                                             {!isEditing ? (
                                                 <>
-                                                    <button type="button" onClick={() => startEdit(c)}>수정</button>
-                                                    <button type="button" onClick={() => remove(key)}>삭제</button>
+                                                    {/* 심플 텍스트 버튼 */}
+                                                    <Button
+                                                        size="small"
+                                                        variant="text"
+                                                        color="inherit"
+                                                        onClick={() => startEdit(c)}
+                                                        sx={{
+                                                            minWidth: 0,
+                                                            px: 1,
+                                                            textTransform: "none",
+                                                            color: "text.secondary",
+                                                            "&:hover": { backgroundColor: "action.hover" },
+                                                        }}
+                                                    >
+                                                        수정
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="text"
+                                                        color="inherit"
+                                                        onClick={() => remove(key)}
+                                                        sx={{
+                                                            minWidth: 0,
+                                                            px: 1,
+                                                            textTransform: "none",
+                                                            color: "text.secondary",
+                                                            "&:hover": { backgroundColor: "action.hover" },
+                                                        }}
+                                                    >
+                                                        삭제
+                                                    </Button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <button type="button" onClick={submitEdit} disabled={editSubmitting}>
+                                                    <Button
+                                                        size="small"
+                                                        variant="contained"
+                                                        disabled={editSubmitting}
+                                                        onClick={submitEdit}
+                                                        sx={{ textTransform: "none" }}
+                                                    >
                                                         {editSubmitting ? "저장 중..." : "저장"}
-                                                    </button>
-                                                    <button type="button" onClick={cancelEdit}>취소</button>
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={cancelEdit}
+                                                        sx={{ textTransform: "none" }}
+                                                    >
+                                                        취소
+                                                    </Button>
                                                 </>
                                             )}
-                                        </span>
+                                        </Stack>
                                     )}
                                 </div>
 
                                 {!isEditing ? (
-                                    <div style={{ whiteSpace: "pre-wrap", marginTop: 6 }}>{c.content}</div>
+                                    <div className="comment-content" style={{ whiteSpace: "pre-wrap", marginTop: 6 }}>{c.content}</div>
                                 ) : (
                                     <div style={{ marginTop: 6 }}>
                                         <textarea
@@ -314,13 +322,23 @@ export default function CommentList({ postId, onAdded }) {
                 </ul>
             )}
 
-            {/* 페이지네이션 */}
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={prev} disabled={page === 0}>이전</button>
+            {/* 페이지네이션 - 가운데 정렬 + 아래 여백 확장 */}
+            <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ mt: 1.5, mb: 0, justifyContent: "center", width: "100%" }}
+            >
+                <Button size="small" variant="outlined" onClick={prev} disabled={page === 0} sx={{ textTransform: "none" }}>
+                    이전
+                </Button>
                 <span>{page + 1} / {totalPages || 1}</span>
-                <button onClick={next} disabled={page + 1 >= totalPages}>다음</button>
-            </div>
+                <Button size="small" variant="outlined" onClick={next} disabled={page + 1 >= totalPages} sx={{ textTransform: "none" }}>
+                    다음
+                </Button>
+            </Stack>
 
+            {/* 텍스트에어리어 포커스 효과만 유지 */}
             <style>{`
         .cmt-textarea:focus, .cmt-editarea:focus {
           border-color: #2d5ae7;
