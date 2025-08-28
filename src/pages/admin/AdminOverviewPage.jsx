@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Container,
-  Row,
-  Col,
-  Card,
-  Form,
-  Alert,
-  Spinner,
-} from "react-bootstrap";
+  Grid,
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  FormControl,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+} from "@mui/material";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -23,7 +26,6 @@ import {
 } from "chart.js";
 import { api } from "../../api/api-client";
 
-// Chart.js 등록
 ChartJS.register(
   ArcElement,
   Tooltip,
@@ -36,32 +38,9 @@ ChartJS.register(
   Filler
 );
 
-import {
-  FormControl,
-  FormLabel,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Grid,
-  Paper,
-  Box,
-  Typography,
-  useTheme,
-  Divider,
-} from "@mui/material";
-
 const fmt = (d) => d.toISOString().slice(0, 10);
 
-/*
- * 관리자 대시보드 (React, Bootstrap, Chart.js)
- * - 상단 KPI 카드: Total Users / News / Board / Comments
- * - 성별 비율: 도넛
- * - 일별 조회수: 라인
- * - 연령·성별 분포: 스택 바
- */
-
 const AdminOverviewPage = () => {
-  // 기간 기본: 최근 7일
   const today = useMemo(() => new Date(), []);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -70,35 +49,45 @@ const AdminOverviewPage = () => {
   });
   const [endDate, setEndDate] = useState(fmt(today));
 
-  // 데이터 상태
-  const [summary, setSummary] = useState(null); // {usersTotal, newsTotal, boardTotal, commentTotal}
-  const [gender, setGender] = useState(null); // {male, female}
-  const [daily, setDaily] = useState([]); // [{date, viewCount}]
-  const [ageGender, setAgeGender] = useState([]); // [{ageGroup, gender, viewCount}]
-
-  // daily view, age gender 묶음
-  const [chartTab, setChartTab] = React.useState("daily");
+  const [summary, setSummary] = useState(null);
+  const [gender, setGender] = useState(null);
+  const [daily, setDaily] = useState([]);
+  const [ageGender, setAgeGender] = useState([]);
+  const [chartTab, setChartTab] = useState("daily");
   const [err, setErr] = useState(null);
 
-  // mui 레이아웃
-  const theme = useTheme();
   const cardSx = {
-    p: 2.5,
-    borderRadius: 2,
-    elevation: 0,
+    p: 4,
+    borderRadius: 3,
     bgcolor: "background.paper",
-    boxShadow:
-      theme.palette.mode === "light"
-        ? "0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.10)"
-        : "0 1px 2px rgba(0,0,0,0.4)",
-    border: `1px solid ${
-      theme.palette.mode === "light"
-        ? theme.palette.grey[200]
-        : theme.palette.grey[800]
-    }`,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
   };
 
-  // 공통 로더
+  const kpiCardSx = {
+    p: 2,
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    minHeight: 120,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    border: "none",
+    borderRadius: 2,
+  };
+
+  const chartCardSx = {
+    p: 3,
+    borderRadius: 3,
+    bgcolor: "background.paper",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    width: "100%",
+  };
+
   const loadInitial = async () => {
     setErr(null);
     try {
@@ -106,12 +95,10 @@ const AdminOverviewPage = () => {
         api.get("/admins/stats/summary"),
         api.get("/admins/stats/gender-ratio"),
       ]);
-
       setSummary(d.data);
       setGender(g.data);
     } catch (e) {
       setErr(e?.message || String(e));
-    } finally {
     }
   };
 
@@ -124,51 +111,29 @@ const AdminOverviewPage = () => {
       ]);
       setDaily(Array.isArray(dv) ? dv : []);
       setAgeGender(Array.isArray(ag) ? ag : []);
-      console.log("get", dv);
     } catch (e2) {
       setErr(e2?.message || String(e2));
-    } finally {
     }
   };
 
-  // 초기(KPI/성비)
   useEffect(() => {
     loadInitial();
   }, []);
 
-  // 기간 변경 시(일별/연령·성별)
   useEffect(() => {
     loadRange(startDate, endDate);
   }, [startDate, endDate]);
 
-  // ---------- 차트 데이터 가공 ----------
-
-  // KPI 카드
-  const kpi = [
-    { title: "이용자 현황", value: summary?.totalUsers ?? "-" },
-    { title: "뉴스 게시글 현황", value: summary?.totalNewsPosts ?? "-" },
-    { title: "게시판 게시글 현황", value: summary?.totalBoardPosts ?? "-" },
-    { title: "사이트 댓글 현황", value: summary?.totalComments ?? "-" },
-  ];
-
-  // 성별 비율 (Doughnut)
   const genderData = useMemo(() => {
     const m = gender?.maleCounts ?? 0;
     const f = gender?.femaleCounts ?? 0;
     return {
       labels: ["남성", "여성"],
-      datasets: [
-        {
-          data: [m, f],
-          backgroundColor: ["#0d6efd", "#dc3545"],
-        },
-      ],
+      datasets: [{ data: [m, f], backgroundColor: ["#0d6efd", "#dc3545"] }],
     };
   }, [gender]);
 
-  // 일별 조회수 (Line)
   const dailyData = useMemo(() => {
-    const safe = Array.isArray(daily) ? daily : [];
     const labels = daily.map((d) => d.date);
     const values = daily.map((d) => d.viewCount);
     return {
@@ -187,7 +152,6 @@ const AdminOverviewPage = () => {
     };
   }, [daily]);
 
-  // 연령·성별 (Bar, stack)
   const ageGenderData = useMemo(() => {
     const rows = Array.isArray(ageGender) ? ageGender : [];
     const order = ["10대", "20대", "30대", "40대", "50대", "60대 이상"];
@@ -218,13 +182,13 @@ const AdminOverviewPage = () => {
     };
   }, [ageGender]);
 
-  // 공통 옵션
   const lineOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: true } },
     scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
   };
+
   const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -236,187 +200,153 @@ const AdminOverviewPage = () => {
   };
 
   return (
-    <Container fluid className="py-4">
-      {/* 상단 필터 */}
-      <Row className="align-items-end g-3 mb-3">
-        <Col xs="auto">
-          <h3 className="mb-0">DEV-SPACE information for admin</h3>
-        </Col>
-      </Row>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Paper sx={cardSx}>
+        {/* DASH BOARD 제목 */}
+        <Typography
+          variant="h4"
+          sx={{
+            mb: 4,
+            textAlign: "center",
+            fontWeight: 800,
+            fontSize: { xs: "2rem", md: "3rem" },
+            letterSpacing: "0.15em",
+            background:
+              "linear-gradient(90deg, #0d6efd, #dc3545, #0dcaf0, #198754)",
+            backgroundSize: "300% 100%",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            animation: "gradientMove 3s ease infinite",
+            textShadow: "2px 2px 6px rgba(0,0,0,0.2)",
+          }}
+        >
+          DASH BOARD
+        </Typography>
 
-      <Box
-        sx={{
-          p: {
-            xs: 2,
-            md: 3,
-            borderRadius: 15,
-            border: `1px solid ${
-              theme.palette.mode === "light"
-                ? theme.palette.grey[200]
-                : theme.palette.grey[800]
-            }`,
-          },
-        }}
-      >
-        <Grid container spacing={3} sx={{ mb: 5 }}>
-          {/* 상단: KPI (좌) */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={cardSx}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                KPI
+        {/* KPI 카드 */}
+        <Grid container spacing={3} sx={{ mb: 4 }} justifyContent="center">
+          {[
+            { label: "이용자 현황", value: `${summary?.totalUsers ?? "-"} 명` },
+            {
+              label: "뉴스 게시글 현황",
+              value: `${summary?.totalNewsPosts ?? "-"} 건`,
+            },
+            {
+              label: "게시판 게시글 현황",
+              value: `${summary?.totalBoardPosts ?? "-"} 건`,
+            },
+            {
+              label: "전체 댓글 수",
+              value: `${summary?.totalComments ?? "-"} 개`,
+            },
+          ].map((k, i) => (
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              md={3}
+              key={i}
+              sx={{ display: "flex", alignItems: "stretch" }}
+            >
+              <Paper sx={kpiCardSx}>
+                <Typography variant="body2" color="text.secondary">
+                  {k.label}
+                </Typography>
+                <Typography variant="h4" color="primary" sx={{ mt: 1 }}>
+                  {k.value}
+                </Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* 성별 비율 + 날짜/차트 */}
+        <Grid container spacing={3} justifyContent="center">
+          {/* 성별 비율 */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ ...chartCardSx, width: "100%" }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                성별 비율
               </Typography>
-
-              <Grid container spacing={2}>
-                {[
-                  {
-                    label: "이용자 현황",
-                    value: `${summary?.totalUsers ?? "-"} 명`,
-                  },
-                  {
-                    label: "뉴스 게시글 현황",
-                    value: `${summary?.totalNewsPosts ?? "-"} 건`,
-                  },
-                  {
-                    label: "게시판 게시글 현황",
-                    value: `${summary?.totalBoardPosts ?? "-"} 건`,
-                  },
-                  {
-                    label: "전체 댓글 수 현황",
-                    value: `${summary?.totalComments ?? "-"} 개`,
-                  },
-                ].map((k, i) => (
-                  <Grid key={i} item xs={6}>
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 1.5,
-                        bgcolor: "rgb",
-
-                        border: `1px solid ${
-                          theme.palette.mode === "light"
-                            ? theme.palette.grey[200]
-                            : theme.palette.grey[800]
-                        }`,
-                      }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        {k.label}
-                      </Typography>
-                      <Typography variant="h5" sx={{ mt: 0.5 }}>
-                        {k.value}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
+              <Box sx={{ width: "100%", height: { xs: 250, md: 340 } }}>
+                <Doughnut
+                  data={genderData}
+                  options={{ responsive: true, maintainAspectRatio: false }}
+                />
+              </Box>
             </Paper>
           </Grid>
 
-          {/* 상단: 성별 비율 (우) */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={cardSx}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                성별 비율
-              </Typography>
+          {/* 날짜 선택 + 라디오 + 차트 */}
+          <Grid item xs={12} md={8}>
+            <Paper sx={chartCardSx}>
+              <Grid container spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="시작일"
+                    type="date"
+                    size="small"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="종료일"
+                    type="date"
+                    size="small"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} md="auto" sx={{ ml: "auto" }}>
+                  <FormControl>
+                    <RadioGroup
+                      row
+                      name="chart-tab"
+                      value={chartTab}
+                      onChange={(e) => setChartTab(e.target.value)}
+                    >
+                      <FormControlLabel
+                        value="daily"
+                        control={<Radio size="small" />}
+                        label="일별 조회수"
+                      />
+                      <FormControlLabel
+                        value="ageGender"
+                        control={<Radio size="small" />}
+                        label="연령·성별 활동"
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </Grid>
+              </Grid>
 
-              <Doughnut data={genderData} />
+              <Box sx={{ width: "100%", height: { xs: 250, md: 340 } }}>
+                {chartTab === "daily" ? (
+                  <Line data={dailyData} options={lineOptions} />
+                ) : (
+                  <Bar data={ageGenderData} options={barOptions} />
+                )}
+              </Box>
             </Paper>
           </Grid>
         </Grid>
+      </Paper>
 
-        <Box
-          sx={{
-            p: 2,
-            borderRadius: 1.5,
-
-            border: `1px solid ${
-              theme.palette.mode === "light"
-                ? theme.palette.grey[200]
-                : theme.palette.grey[800]
-            }`,
-          }}
-        >
-          <Col lg={8}>
-            <Card className="shadow-sm h-100">
-              <Card.Body>
-                <Card.Title>날짜 설정</Card.Title>
-              </Card.Body>
-            </Card>
-          </Col>
-
-          {/* 하단: 차트 전환 (라디오 버튼 + 단일 카드) */}
-          <Row className="g-3">
-            <Col xs="auto" className="ms-auto">
-              <Form className="d-flex align-items-center gap-2">
-                <Form.Group controlId="startDate">
-                  <Form.Label className="small mb-1">시작일</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    size="sm"
-                  />
-                </Form.Group>
-                <Form.Group controlId="endDate">
-                  <Form.Label className="small mb-1">종료일</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    size="sm"
-                  />
-                </Form.Group>
-              </Form>
-            </Col>
-            {/* 오른쪽 정렬된 라디오 버튼 */}
-            <Col xs={12} className="d-flex justify-content-end">
-              <FormControl>
-                <FormLabel id="chart-tab-label" className="small"></FormLabel>
-                <RadioGroup
-                  row
-                  aria-labelledby="chart-tab-label"
-                  name="chart-tab"
-                  value={chartTab}
-                  onChange={(e) => setChartTab(e.target.value)}
-                >
-                  <FormControlLabel
-                    value="daily"
-                    control={<Radio size="small" />}
-                    label="일별 조회수"
-                  />
-                  <FormControlLabel
-                    value="ageGender"
-                    control={<Radio size="small" />}
-                    label="연령·성별별 활동"
-                  />
-                </RadioGroup>
-              </FormControl>
-            </Col>
-
-            <Col xs={12}>
-              {chartTab === "daily" ? (
-                <Card className="shadow-sm border-0 bg-light text-dark dark:bg-dark dark:text-light">
-                  <Card.Body>
-                    <Card.Title></Card.Title>
-                    <div style={{ height: 340 }}>
-                      <Line data={dailyData} options={lineOptions} />
-                    </div>
-                  </Card.Body>
-                </Card>
-              ) : (
-                <Card className="shadow-sm border-0 bg-light text-dark dark:bg-dark dark:text-light">
-                  <Card.Body>
-                    <Card.Title></Card.Title>
-                    <div style={{ height: 340 }}>
-                      <Bar data={ageGenderData} options={barOptions} />
-                    </div>
-                  </Card.Body>
-                </Card>
-              )}
-            </Col>
-          </Row>
-        </Box>
-      </Box>
+      <style>
+        {`
+          @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+        `}
+      </style>
     </Container>
   );
 };
