@@ -28,10 +28,10 @@ export default function App() {
     role === "ADMIN"
       ? ADMIN_NAVIGATOR
       : USER_NAVIGATOR.map((item) => {
-          // My Page는 로그인된 경우만 포함
-          if (item.segment === "mypage" && !session) return null;
-          return item;
-        }).filter(Boolean); // null 제거
+        // My Page는 로그인된 경우만 포함
+        if (item.segment === "mypage" && !session) return null;
+        return item;
+      }).filter(Boolean); // null 제거
 
   return (
     <ReactRouterAppProvider

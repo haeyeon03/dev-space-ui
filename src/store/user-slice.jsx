@@ -17,7 +17,14 @@ const load = () => ({
   email: safeGet(STORAGE.email),
   role: safeGet(STORAGE.role),
   image: safeGet(STORAGE.image),
+  imageBlob: "",
 });
+
+/* 토큰 헤더 */
+function authHeaders(extra = {}) {
+  const t = (typeof localStorage !== "undefined" && localStorage.getItem("token")) || "";
+  return { ...(t ? { Authorization: `Bearer ${t}` } : {}), ...extra };
+}
 
 const userSlice = createSlice({
   name: "user",
@@ -33,6 +40,7 @@ const userSlice = createSlice({
     },
     setProfileImage(state, { payload }) {
       state.image = payload || "";
+      state.imageBlob = "";
     },
     clearUser(state) {
       state.token = "";
@@ -40,6 +48,7 @@ const userSlice = createSlice({
       state.email = "";
       state.role = "";
       state.image = "";
+      state.imageBlob = "";
     },
     syncFromStorage(state) {
       const s = load();
@@ -48,14 +57,57 @@ const userSlice = createSlice({
       state.email = s.email;
       state.role = s.role;
       state.image = s.image;
+      state.imageBlob = "";
+    },
+    _setImageBlob(state, { payload }) {
+      state.imageBlob = payload || "";
     },
   },
 });
 
-export const { setUser, clearUser, syncFromStorage, setProfileImage } = userSlice.actions;
+export const { setUser, clearUser, syncFromStorage, setProfileImage, _setImageBlob } = userSlice.actions;
+
+/* 이미지(blob) 자동 해석 미들웨어 — setProfileImage 호출 시 한 번만 동작 */
+let lastBlobUrl = "";
+const resolveImageBlobMw = (storeAPI) => (next) => async (action) => {
+  const result = next(action);
+
+  if (action.type !== setProfileImage.type) return result;
+
+  const { image } = storeAPI.getState().user;
+  if (!image || image.startsWith("blob:") || image.startsWith("data:")) {
+    if (lastBlobUrl) {
+      try { URL.revokeObjectURL(lastBlobUrl); } catch { }
+      lastBlobUrl = "";
+    }
+    storeAPI.dispatch(_setImageBlob(""));
+    return result;
+  }
+
+  try {
+    const res = await fetch(image, { headers: authHeaders() });
+    if (!res.ok) {
+      storeAPI.dispatch(_setImageBlob(""));
+      return result;
+    }
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    if (lastBlobUrl) {
+      try { URL.revokeObjectURL(lastBlobUrl); } catch { }
+    }
+    lastBlobUrl = blobUrl;
+
+    storeAPI.dispatch(_setImageBlob(blobUrl));
+  } catch {
+    storeAPI.dispatch(_setImageBlob(""));
+  }
+  return result;
+};
 
 export const store = configureStore({
   reducer: { user: userSlice.reducer },
+  middleware: (getDefault) => getDefault().concat(resolveImageBlobMw),
 });
 
 // 저장소 → localStorage 동기화
@@ -81,13 +133,15 @@ if (typeof window !== "undefined") {
 
 export const selectSession = (state) => {
   const { nickname, email, role, image } = state.user;
+  const imageBlob = state.user?.imageBlob || "";
+
   if (!nickname && !email && !role && !image) return null;
   return {
     user: {
       name: nickname || "(No Name)",
       email: email || "(No Linked E-Mail)",
       role,
-      image,
+      image: imageBlob || image || "",
     },
   };
 };
