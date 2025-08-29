@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { setProfileImage } from "../../store/user-slice";
+import { setProfileImage, setUser } from "../../store/user-slice";
 
 /* ====== 자동 API 베이스 감지 유틸 ====== */
 const API_BASE = import.meta.env.VITE_API_BASE || `${location.protocol}//${location.hostname}:8080/api`;
@@ -436,6 +436,13 @@ export default function MyInfoEditPage() {
         headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(body),
       });
+
+      //저장 직후 전역 유저 상태 동기화
+      dispatch(setUser({
+        nickname: profile.nickname || "",
+        email: profile.email || "",
+      }));
+
       setMsg("수정이 완료되었습니다.");
       nav("/mypage");
     } catch (e2) {

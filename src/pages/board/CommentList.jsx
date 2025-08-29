@@ -1,4 +1,3 @@
-// src/pages/board/CommentList.jsx
 import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { api } from "../../api/api-client";
@@ -7,9 +6,9 @@ import { api } from "../../api/api-client";
 import { Button, Stack } from "@mui/material";
 
 const TARGET_TYPE = "BOARD_POST";
-const DBG = true; // 콘솔 로깅 보고 싶으면 true
+const DBG = false; // 콘솔 보고 싶으면 true
 
-export default function CommentList({ postId, onAdded }) {
+export default function CommentList({ postId, onAdded, onChanged, onDeleted }) {
     const [items, setItems] = useState([]);
     const [page, setPage] = useState(0);
     const [size] = useState(10);
@@ -42,6 +41,7 @@ export default function CommentList({ postId, onAdded }) {
                 const data = await api.get(`/board-posts/${postId}/comments`, {
                     curPage: curPage,
                     pageSize: size,
+                    _ts: Date.now(), // 캐시 버스트
                 });
                 setItems(data?.content ?? []);
                 setPage(data?.number ?? 0);
@@ -75,6 +75,7 @@ export default function CommentList({ postId, onAdded }) {
             setContent("");
             await load(0);
             onAdded?.();
+            onChanged?.();
         } catch (err) {
             setError(err?.response?.data?.message || err?.message || "댓글 등록에 실패했습니다.");
         } finally {
@@ -106,18 +107,16 @@ export default function CommentList({ postId, onAdded }) {
             { m: "post", url: `/comments/${commentId}/update?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}`, body: { content: text } },
             { m: "put", url: `/board-posts/${postId}/comments`, body: { commentId, content: text, targetType: TARGET_TYPE } },
         ];
-
         let lastErr;
         for (const c of candidates) {
             try {
-                log("UPDATE try:", c.m.toUpperCase(), c.url, c.body);
+                if (DBG) log("UPDATE try:", c.m.toUpperCase(), c.url, c.body);
                 if (c.m === "put") await api.put(c.url, c.body);
                 else if (c.m === "patch") await (api.patch ? api.patch(c.url, c.body) : api.put(c.url, c.body));
                 else if (c.m === "post") await api.post(c.url, c.body);
+                if (DBG) log("UPDATE ok:", c.m.toUpperCase(), c.url);
                 return;
-            } catch (e) {
-                lastErr = e;
-            }
+            } catch (e) { lastErr = e; }
         }
         throw lastErr || new Error("댓글 수정에 실패했습니다.");
     };
@@ -133,12 +132,13 @@ export default function CommentList({ postId, onAdded }) {
             { m: "post", url: `/comments/${commentId}/delete?targetType=${encodeURIComponent(TARGET_TYPE)}&targetId=${encodeURIComponent(postId)}` },
             { m: "delete", url: `/board-posts/${postId}/comments?commentId=${commentId}&targetType=${encodeURIComponent(TARGET_TYPE)}` },
         ];
-
         let lastErr;
         for (const c of candidates) {
             try {
+                if (DBG) log("DELETE try:", c.m.toUpperCase(), c.url);
                 if (c.m === "delete") await api.delete(c.url);
                 else if (c.m === "post") await api.post(c.url, {});
+                if (DBG) log("DELETE ok:", c.m.toUpperCase(), c.url);
                 return;
             } catch (e) { lastErr = e; }
         }
@@ -155,7 +155,8 @@ export default function CommentList({ postId, onAdded }) {
             setEditSubmitting(true);
             await tryUpdateComment(editingId, text);
             await load(page);
-            onAdded?.();
+            onChanged?.();
+            onAdded?.(); // 레거시 호환
             cancelEdit();
         } catch (e) {
             alert(e?.response?.data?.message || e?.message || "댓글 수정에 실패했습니다.");
@@ -171,7 +172,9 @@ export default function CommentList({ postId, onAdded }) {
         try {
             await tryDeleteComment(commentId);
             await load(page);
-            onAdded?.();
+            onDeleted?.();
+            onChanged?.();
+            onAdded?.(); // 레거시 호환
         } catch (e) {
             alert(e?.response?.data?.message || e?.message || "댓글 삭제에 실패했습니다.");
         }
@@ -180,7 +183,7 @@ export default function CommentList({ postId, onAdded }) {
     if (loading && items.length === 0) return <div>댓글 불러오는 중...</div>;
 
     return (
-        <section style={{ marginTop: 24 }}>
+        <section className="board-comment-scope" style={{ marginTop: 24 }}>
             <h3 style={{ margin: "8px 0" }}>댓글</h3>
 
             {/* 입력 폼 */}
@@ -231,27 +234,20 @@ export default function CommentList({ postId, onAdded }) {
                         const isEditing = editingId === key;
 
                         return (
-                            <li key={key} className="comment-item" style={{ borderTop: "1px solid #eee", padding: "12px 0" }}>
-                                <div className="comment-meta" style={{ fontSize: 14, color: "#666", display: "flex", justifyContent: "space-between", gap: 12 }}>
+                            <li key={key} className="board-comment-item" style={{ borderTop: "1px solid #eee", padding: "12px 0" }}>
+                                <div className="board-comment-meta" style={{ fontSize: 14, color: "#666", display: "flex", justifyContent: "space-between", gap: 12 }}>
                                     <span><b>{nickname}</b> · {created}</span>
 
                                     {token && mine && (
-                                        <Stack direction="row" spacing={1} alignItems="center" className="comment-actions">
+                                        <Stack direction="row" spacing={1} alignItems="center" className="board-comment-actions">
                                             {!isEditing ? (
                                                 <>
-                                                    {/* 심플 텍스트 버튼 */}
                                                     <Button
                                                         size="small"
                                                         variant="text"
                                                         color="inherit"
                                                         onClick={() => startEdit(c)}
-                                                        sx={{
-                                                            minWidth: 0,
-                                                            px: 1,
-                                                            textTransform: "none",
-                                                            color: "text.secondary",
-                                                            "&:hover": { backgroundColor: "action.hover" },
-                                                        }}
+                                                        sx={{ minWidth: 0, px: 1, textTransform: "none", color: "text.secondary", "&:hover": { backgroundColor: "action.hover" } }}
                                                     >
                                                         수정
                                                     </Button>
@@ -260,34 +256,17 @@ export default function CommentList({ postId, onAdded }) {
                                                         variant="text"
                                                         color="inherit"
                                                         onClick={() => remove(key)}
-                                                        sx={{
-                                                            minWidth: 0,
-                                                            px: 1,
-                                                            textTransform: "none",
-                                                            color: "text.secondary",
-                                                            "&:hover": { backgroundColor: "action.hover" },
-                                                        }}
+                                                        sx={{ minWidth: 0, px: 1, textTransform: "none", color: "text.secondary", "&:hover": { backgroundColor: "action.hover" } }}
                                                     >
                                                         삭제
                                                     </Button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Button
-                                                        size="small"
-                                                        variant="contained"
-                                                        disabled={editSubmitting}
-                                                        onClick={submitEdit}
-                                                        sx={{ textTransform: "none" }}
-                                                    >
+                                                    <Button size="small" variant="contained" disabled={editSubmitting} onClick={submitEdit} sx={{ textTransform: "none" }}>
                                                         {editSubmitting ? "저장 중..." : "저장"}
                                                     </Button>
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        onClick={cancelEdit}
-                                                        sx={{ textTransform: "none" }}
-                                                    >
+                                                    <Button size="small" variant="outlined" onClick={cancelEdit} sx={{ textTransform: "none" }}>
                                                         취소
                                                     </Button>
                                                 </>
@@ -297,7 +276,7 @@ export default function CommentList({ postId, onAdded }) {
                                 </div>
 
                                 {!isEditing ? (
-                                    <div className="comment-content" style={{ whiteSpace: "pre-wrap", marginTop: 6 }}>{c.content}</div>
+                                    <div className="board-comment-content" style={{ whiteSpace: "pre-wrap", marginTop: 6 }}>{c.content}</div>
                                 ) : (
                                     <div style={{ marginTop: 6 }}>
                                         <textarea
@@ -322,13 +301,8 @@ export default function CommentList({ postId, onAdded }) {
                 </ul>
             )}
 
-            {/* 페이지네이션 - 가운데 정렬 + 아래 여백 확장 */}
-            <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                sx={{ mt: 1.5, mb: 0, justifyContent: "center", width: "100%" }}
-            >
+            {/* 페이지네이션 */}
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5, mb: 0, justifyContent: "center", width: "100%" }}>
                 <Button size="small" variant="outlined" onClick={prev} disabled={page === 0} sx={{ textTransform: "none" }}>
                     이전
                 </Button>
@@ -338,7 +312,6 @@ export default function CommentList({ postId, onAdded }) {
                 </Button>
             </Stack>
 
-            {/* 텍스트에어리어 포커스 효과만 유지 */}
             <style>{`
         .cmt-textarea:focus, .cmt-editarea:focus {
           border-color: #2d5ae7;

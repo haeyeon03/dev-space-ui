@@ -2,7 +2,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { setProfileImage } from "../../store/user-slice";
+import { setProfileImage, setUser } from "../../store/user-slice";
+
 
 /* ====== 자동 API 베이스 감지 유틸 ====== */
 const CANDIDATE_API_BASES = [
@@ -192,7 +193,13 @@ export default function MyInfoViewPage() {
         };
         setProfile(next);
 
-        // ⬇️ 미니 프로필 즉시 갱신
+        // 전역 유저 상태도 동기화 (닉네임/이메일)
+        dispatch(setUser({
+          nickname: next.nickname || "",
+          email: next.email || "",
+        }));
+
+        // 미니 프로필 즉시 갱신
         if (next.profileImageUrl) {
           const abs = withBust(toAbsoluteAssetUrl(next.profileImageUrl));
           dispatch(setProfileImage(abs));
