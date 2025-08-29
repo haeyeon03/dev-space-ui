@@ -30,7 +30,9 @@ export default function SidebarFooterAccount({ mini }) {
   const currentImg = useSelector((s) => s.user?.image);
 
   React.useEffect(() => {
-    if (!token || currentImg) return; // 이미 이미지 있으면 스킵
+    // 토큰 없으면 중단. 이미지가 이미 있고 blob이 아니면 스킵(=정상 URL이면 그대로 사용)
+    if (!token) return;
+    if (currentImg && !currentImg.startsWith("blob:")) return;
 
     (async () => {
       const base =
@@ -54,18 +56,8 @@ export default function SidebarFooterAccount({ mini }) {
           }`;
         const absBust = withBust(abs);
 
-        // 3) 보호 리소스면 인증으로 받아 blob으로 교체(둘 다 즉시 표시)
-        try {
-          const ir = await fetch(absBust, { headers: authHeaders() });
-          if (ir.ok) {
-            const blobUrl = URL.createObjectURL(await ir.blob());
-            dispatch(setProfileImage(blobUrl));
-          } else {
-            dispatch(setProfileImage(absBust));
-          }
-        } catch {
-          dispatch(setProfileImage(absBust));
-        }
+        // 3) 원본 절대 URL만 저장 (blob 생성/보호 리소스 처리는 전역 미들웨어가 담당)
+        dispatch(setProfileImage(absBust));
       } catch {
       }
     })();
