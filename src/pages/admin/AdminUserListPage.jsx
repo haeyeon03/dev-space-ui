@@ -45,13 +45,14 @@ const AdminUserListPage = () => {
     const params = {
       page,
       size: pageSize,
-      keyword: query || undefined,
+      keyword: query?.trim() || undefined,
       role: roleFilter || undefined,
       suspended: suspendedFilter || undefined,
       sort: sortParam,
     };
 
     const data = await api.get("/admins/users", params);
+
     const content = Array.isArray(data?.content) ? data.content : [];
     setRows(
       content.filter(Boolean).map((u, idx) => ({
@@ -64,6 +65,7 @@ const AdminUserListPage = () => {
         banEndAt: u.banEndAt ?? null,
       }))
     );
+
     setRowCount(Number.isFinite(data?.totalElements) ? data.totalElements : 0);
   };
 
@@ -197,7 +199,7 @@ const AdminUserListPage = () => {
         </FormControl>
 
         {/* 정지 필터 */}
-        <FormControl size="small" sx={{ minWidth: 150 }}>
+        {/* <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>정지</InputLabel>
           <Select
             value={suspendedFilter}
@@ -211,7 +213,7 @@ const AdminUserListPage = () => {
             <MenuItem value="true">정지</MenuItem>
             <MenuItem value="false">정상</MenuItem>
           </Select>
-        </FormControl>
+        </FormControl> */}
 
         {/* 초기화 버튼 */}
         <Box flexGrow={1} display="flex" justifyContent="flex-end">
