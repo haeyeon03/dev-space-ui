@@ -45,18 +45,15 @@ export class APIClient {
       }, //정상이면 그냥 res 온거 그대로 return
       async (error) => {
         const original = error.config || {};
-        const status = error.response?.status ?? 0;
         const url = (original.url || "").toLowerCase();
 
         // 리프레시 자신이거나 인증 불필요 경로면 재시도 금지
         const isReissueCall = url.includes("/auth/reissue");
         if (
-          status === 401 &&
-          !original._retry &&
+          error.response.data.code === "JWT002" &&
           !isAuthFree(url) &&
           !isReissueCall
         ) {
-          original._retry = true;
           try {
             await this.enqueueRefresh();
             return this.instance(original); // 원 요청 재시도
@@ -73,40 +70,47 @@ export class APIClient {
   }
 
   /*
-    동시 요청 환경에서 토큰 만료(예: 401 또는 서버 정의 에러 코드)가 여러 요청에서 동시에 발생할 수 있다.
-    이때 각 요청이 모두 reissue API를 호출하면 새 토큰이 중복 발급된다.
+    AccessToken 만료 시, 동시에 여러 API 요청이 실패(401 등)할 수 있다.
+    → 각 요청이 동시에 /auth/reissue 호출하면 토큰이 중복 발급되는 문제가 발생한다.
 
-    해결 전략:
-    1) 최초로 감지한 토큰 만료 시점에만 reissue API를 호출한다(락).
-    2) reissue 응답을 기다리는 동안 도착하는 추가 만료 응답은 큐에 대기시킨다(중복 호출 방지).
-    3) reissue 성공 시 새 토큰을 큐의 대기자들에게 전달하고,
-       각 요청은 자신이 보유한 원래 Axios config(메서드/URL/파라미터/바디/헤더 포함)로 재시도한다.
-    4) reissue 실패(401/403/만료/네트워크 오류 등) 시 큐의 대기자들에게 실패를 알리고,
-       클라이언트 토큰을 정리한 뒤 상위에서 로그인 화면 이동 등 후처리한다.
+    해결 전략 (동기화 큐 방식):
+    1) 최초로 만료를 감지한 요청만 /auth/reissue 호출 (isRefreshing 플래그).
+    2) 이후 들어온 만료 요청은 queue에 쌓아두고 대기 (중복 호출 방지).
+    3) reissue 성공 시 새 토큰을 queue의 대기자들에게 전달 → 각 요청은 재시도 가능.
+    4) reissue 실패 시 대기자들에게 실패(null) 알림 → 클라이언트는 로그아웃/재로그인 처리.
   */
   async enqueueRefresh() {
+    // 이미 토큰 갱신 중이라면, 새 Promise(Pending)를 반환하고 queue에 resolve 저장 → 이후 깨워줌
     if (this.isRefreshing) {
       return new Promise((resolve) => this.queue.push(resolve));
     }
 
+    // 갱신 시작
     this.isRefreshing = true;
     try {
+      //서버에 reissue 요청
       const res = await this.instance.post("/auth/reissue", {}); // RT는 httpOnly 쿠키
       const accessToken = res.data?.data;
       if (!accessToken) throw new Error("No accessToken in reissue response");
 
+      // 새 토큰을 전역 상태(store)에 업데이트
       store.dispatch(setUser({ token: accessToken }));
 
+      // this.queue 복사본을 waiters 변수에 저장
       const waiters = this.queue.slice();
+
       this.queue.length = 0;
+      // resolve() 로 Pending -> fullfilled 로 상태 업데이트
       for (const resolve of waiters) resolve(accessToken);
       return accessToken;
     } catch (e) {
+      // reissue 실패 시 대기자들에게 null 전달 → 실패 처리
       const waiters = this.queue.slice();
       this.queue.length = 0;
       for (const resolve of waiters) resolve(null);
       throw e;
     } finally {
+      // 성공/실패와 관계없이 갱신 상태 해제
       this.isRefreshing = false;
     }
   }

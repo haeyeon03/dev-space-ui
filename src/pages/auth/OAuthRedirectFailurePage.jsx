@@ -31,7 +31,11 @@ const OAuthRedirectFailurePage = () => {
       };
       fetchTempUser();
     } else if (error) {
-      alert("OAuth2 로그인 중 오류가 발생했습니다.");
+      if (error !== "unknown") {
+        alert(error);
+      } else {
+        alert("OAuth2 로그인 중 오류가 발생했습니다.");
+      }
       moveToSignin();
     } else {
       alert("로그인 중 문제가 발생했습니다.");
