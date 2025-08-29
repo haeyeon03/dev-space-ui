@@ -233,11 +233,11 @@ const AdminOverviewPage = () => {
             },
             {
               label: "게시판 게시글 현황",
-              value: `${summary?.totalBoardPosts ?? "-"} 건`,
+              value: `${summary?.totalComments ?? "-"} 건`,
             },
             {
               label: "전체 댓글 수",
-              value: `${summary?.totalComments ?? "-"} 개`,
+              value: `${summary?.totalBoardPosts ?? "-"} 개`,
             },
           ].map((k, i) => (
             <Grid
