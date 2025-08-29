@@ -182,29 +182,29 @@ const NewsViewPage = ({ refreshNewsPost }) => {
 
       {/* 우측: 댓글 영역 */}
       <div className="right-section">
-        <div className="comments-section-wrapper">
-          <div className="comments-section">
-            <div className="comment-page-info">
+        <div className="newsComments-section-wrapper">
+          <div className="newsComments-section">
+            <div className="newsComment-page-info">
               페이지 {curCommentPage + 1} / {totalCommentPages}
             </div>
-            <div className="comments-list">
+            <div className="newsComments-list">
               {comments.map((c) => (
-                <div key={c.postCommentId} className="comment-item">
-                  <div className="comment-header">
-                    <div className="comment-profile"></div>
-                    <span className="comment-author">{c.userNickname}</span>
+                <div key={c.postCommentId} className="newsComment-item">
+                  <div className="newsComment-header">
+                    <div className="newsComment-profile"></div>
+                    <span className="newsComment-author">{c.userNickname}</span>
                   </div>
                   {editingCommentId !== c.postCommentId ? (
-                    <div className="comment-text">{c.content}</div>
+                    <div className="newsComment-text">{c.content}</div>
                   ) : (
                     <input
-                      className="comment-edit-input"
+                      className="newsComment-edit-input"
                       value={editingText}
                       onChange={(e) => setEditingText(e.target.value)}
                     />
                   )}
                   {loginUserId && c.user && c.user.userId === loginUserId && (
-                    <div className="comment-actions">
+                    <div className="newsComment-actions">
                       {editingCommentId === c.postCommentId ? (
                         <>
                           <button
@@ -239,7 +239,7 @@ const NewsViewPage = ({ refreshNewsPost }) => {
               ))}
             </div>
 
-            <div className="comment-pagination">
+            <div className="newsComment-pagination">
               <button
                 disabled={curCommentPage <= 0}
                 onClick={() => fetchComments(curCommentPage - 1, true)}
@@ -264,15 +264,15 @@ const NewsViewPage = ({ refreshNewsPost }) => {
             </div>
 
             <form
-              className="comment-input-container"
+              className="newsComment-input-container"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleCommentSubmit();
               }}
             >
-              <div className="comment-profile"></div>
+              <div className="newsComment-profile"></div>
               <input
-                className="comment-input"
+                className="newsComment-input"
                 placeholder="댓글을 입력..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
