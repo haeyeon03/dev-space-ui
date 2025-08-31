@@ -1,23 +1,33 @@
+# 🧑‍💻 DEV-SPACE UI - 프론트엔드
 
-# Create Toolpad App
+📌 프로젝트 개요  
+프로젝트명: DEV-SPACE UI (프론트엔드)  
+개발 기간: 2025-08-11 ~ 2025-08-29  
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-toolpad-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+🎯 목적  
+DEV-SPACE UI는 사용자 경험을 최우선으로 설계된 프론트엔드 애플리케이션입니다.  
+로그인, 게시판, 파일 관리 등의 기능을 직관적인 화면으로 제공하여 서비스 접근성을 높였습니다.  
 
-## Setup
+주요 목적은 다음과 같다:
+- 직관적이고 반응형 UI 제공  
+- 백엔드 API와 안정적으로 연동  
+- 인증 기반의 상태 관리 구현  
+- 사용자 편의성을 고려한 인터페이스 설계  
 
-Run `npx auth secret` to generate a secret and replace the value in the .env.local file with it.
+📝 요구사항 정의서 및 기능 명세  
 
-Add the CLIENT_ID and CLIENT_SECRET from your OAuth provider to the .env.local file.
+👤 사용자 기능  
+- 로그인 및 회원가입 화면  
+- JWT 기반 인증 처리  
+- 뉴스피드 목록/상세 조회(무한스크롤)
+- 게시글 조회, 작성, 수정, 삭제
+- 댓글 조회, 작성, 수정, 삭제
+- 프로필 관리 및 이미지 업로드  
 
-## Getting Started
+🧑‍💼 관리자 기능  
+- 사용자 계정 관리
+- 사용자 권한 관리  
+- 통계/리포트 UI 제공  
 
-First, run the development server: `npm run dev`
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+🎥 시연영상
+(추가 예정)
