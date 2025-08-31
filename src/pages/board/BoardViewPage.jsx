@@ -57,15 +57,31 @@ function canEditPost(detail, me) {
 /** ===== 인라인 목록(간단) ===== */
 function InlineBoardList({ currentId, ensureScrollTop }) {
   const nav = useNavigate();
-  const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
-
+  const theme = useTheme(); // (사용 안 해도 무방)
   const VIEW_BASE = "/board/";
   const [curPage, setCurPage] = useState(0);
   const [size] = useState(8);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
+
+  // 다크/라이트 자동 대응: MUI CSS 변수 사용
+  const borderColor = "var(--mui-palette-divider)";
+  const textPrimary = "var(--mui-palette-text-primary)";
+  const textSecondary = "var(--mui-palette-text-secondary)";
+  const activeBg = "var(--mui-palette-action-hover)";
+  const pgn = { border: borderColor, text: textPrimary, activeBg };
+
+  const btnStyle = {
+    height: 30, padding: "0 12px", borderRadius: 8,
+    border: `1px solid ${pgn.border}`, background: "transparent", color: pgn.text, cursor: "pointer",
+  };
+  const pageBtnStyle = (active) => ({
+    ...btnStyle,
+    padding: "0 10px",
+    fontWeight: active ? 800 : 500,
+    background: active ? activeBg : "transparent",
+  });
 
   const buildQuery = (page, pageSize) => ({ page, size: pageSize, sort: "createdAt,desc" });
 
@@ -115,20 +131,6 @@ function InlineBoardList({ currentId, ensureScrollTop }) {
     try { return new Date(s).toLocaleDateString(); } catch { return ""; }
   };
 
-  // 간단 스타일
-  const borderColor = isDark ? "#27272a" : "#e5e7eb";
-  const textMuted = isDark ? "#94a3b8" : "#64748b";
-  const pgn = {
-    border: isDark ? "#3f3f46" : "#d4d4d8",
-    text: isDark ? "#e5e7eb" : "#111315",
-    activeBg: isDark ? "rgba(255,255,255,.10)" : "#f1f5f9",
-  };
-  const btnStyle = {
-    height: 30, padding: "0 12px", borderRadius: 8,
-    border: `1px solid ${pgn.border}`, background: "transparent", color: pgn.text, cursor: "pointer",
-  };
-  const pageBtnStyle = (active) => ({ ...btnStyle, padding: "0 10px", fontWeight: active ? 800 : 500, background: active ? pgn.activeBg : "transparent" });
-
   const getPageWindow = (total, current, max = 7) => {
     if (total <= max) return [...Array(total)].map((_, i) => i);
     const half = Math.floor(max / 2);
@@ -144,15 +146,15 @@ function InlineBoardList({ currentId, ensureScrollTop }) {
 
   return (
     <section style={{ marginTop: 28 }}>
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: isDark ? "#e5e7eb" : "#111827" }}>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: textPrimary }}>
         게시글 목록
       </div>
 
       <div style={{ border: "1px solid", borderColor, borderRadius: 10, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: 16, color: textMuted }}>목록 불러오는 중...</div>
+          <div style={{ padding: 16, color: textSecondary }}>목록 불러오는 중...</div>
         ) : items.length === 0 ? (
-          <div style={{ padding: 16, color: textMuted }}>표시할 게시글이 없습니다.</div>
+          <div style={{ padding: 16, color: textSecondary }}>표시할 게시글이 없습니다.</div>
         ) : (
           <>
             <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
@@ -178,7 +180,7 @@ function InlineBoardList({ currentId, ensureScrollTop }) {
                       gridTemplateColumns: "minmax(0,1fr) auto",
                       gap: 12,
                       padding: "10px 12px",
-                      borderTop: idx === 0 ? "none" : `1px solid ${isDark ? "#27272a" : "#f1f5f9"}`,
+                      borderTop: idx === 0 ? "none" : `1px solid var(--mui-palette-divider)`,
                     }}
                   >
                     <button
@@ -190,7 +192,7 @@ function InlineBoardList({ currentId, ensureScrollTop }) {
                         border: 0,
                         padding: 0,
                         cursor: "pointer",
-                        color: isDark ? "#e5e7eb" : "#0f172a",
+                        color: textPrimary,
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -198,8 +200,8 @@ function InlineBoardList({ currentId, ensureScrollTop }) {
                           style={{
                             flex: "0 0 auto",
                             fontSize: 12,
-                            border: `1px solid ${isDark ? "#3f3f46" : "#d4d4d8"}`,
-                            color: isDark ? "#e5e7eb" : "#111315",
+                            border: `1px solid ${borderColor}`,
+                            color: textPrimary,
                             padding: "2px 6px",
                             borderRadius: 6,
                             fontWeight: isCurrent ? 800 : 600,
@@ -214,18 +216,19 @@ function InlineBoardList({ currentId, ensureScrollTop }) {
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             fontWeight: isCurrent ? 800 : 400,
+                            color: textPrimary,
                           }}
                           title={title}
                         >
                           {title}
                         </span>
                       </div>
-                      <div style={{ marginTop: 2, fontSize: 12, color: textMuted, fontWeight: isCurrent ? 800 : 400 }}>
+                      <div style={{ marginTop: 2, fontSize: 12, color: textSecondary, fontWeight: isCurrent ? 800 : 400 }}>
                         {nick} · {date}
                       </div>
                     </button>
 
-                    <div style={{ alignSelf: "center", fontSize: 12, color: textMuted, fontWeight: isCurrent ? 800 : 400 }}>
+                    <div style={{ alignSelf: "center", fontSize: 12, color: textSecondary, fontWeight: isCurrent ? 800 : 400 }}>
                       {rightMeta.length > 0 ? rightMeta.join(" · ") : null}
                     </div>
                   </li>
@@ -241,7 +244,7 @@ function InlineBoardList({ currentId, ensureScrollTop }) {
                 alignItems: "center",
                 gap: 8,
                 padding: 12,
-                borderTop: `1px solid ${isDark ? "#27272a" : "#f1f5f9"}`,
+                borderTop: `1px solid var(--mui-palette-divider)`,
                 flexWrap: "wrap",
               }}
             >
@@ -386,7 +389,7 @@ export default function BoardViewPage() {
         document.body.removeChild(ta);
         setCopied(true);
       }
-    } catch {/* 공유 취소 등 무시 */ }
+    } catch { /* 공유 취소 등 무시 */ }
   };
 
   const onDeletePost = async () => {
