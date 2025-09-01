@@ -66,7 +66,7 @@ const AdminUserWritePage = () => {
         setForm({
           nickname: data?.nickname ?? "",
           gender: (data?.gender ?? "").toString().toUpperCase(),
-          role: (data?.role ?? "user").toLowerCase(),
+          role: (data?.role ?? "user").toUpperCase(),
         });
         setIsBanned(Boolean(data?.banned));
         setBanEndAt(data?.banEndAt ?? null);
@@ -104,15 +104,16 @@ const AdminUserWritePage = () => {
       }
 
       if (
-        (form.role || "").toLowerCase() !== (user?.role ?? "").toLowerCase()
+        (form.role || "").toUpperCase() !== (user?.role ?? "").toUpperCase()
       ) {
+        const roleUpper = (form.role || "").toUpperCase();
         if (api.patch) {
           await api.patch(`/admins/users/${encodeURIComponent(userId)}/role`, {
-            role: form.role,
+            role: roleUpper,
           });
         } else {
           await api.post(`/admins/users/${encodeURIComponent(userId)}/role`, {
-            role: form.role,
+            role: roleUpper,
           });
         }
       }
@@ -140,7 +141,7 @@ const AdminUserWritePage = () => {
       setForm({
         nickname: fresh?.nickname ?? "",
         gender: (fresh?.gender ?? "").toString().toUpperCase(),
-        role: (fresh?.role ?? "user").toLowerCase(),
+        role: (fresh?.role ?? "user").toUpperCase(),
       });
       setIsBanned(Boolean(fresh?.banned));
       setBanEndAt(fresh?.banEndAt ?? null);
@@ -280,12 +281,12 @@ const AdminUserWritePage = () => {
                     }
                   >
                     <FormControlLabel
-                      value="user"
+                      value="USER"
                       control={<Radio />}
                       label="유저"
                     />
                     <FormControlLabel
-                      value="admin"
+                      value="ADMIN"
                       control={<Radio />}
                       label="관리자"
                     />
